@@ -2,21 +2,22 @@
 
 JUCE **AU + VST3** plugin: frequency-selective analog-modeled saturation (multiband-ready shell).
 
-v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology model registry (default **Diode / Silicon** passthrough), spectrum metering, aged hardware UI.
+v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology model registry (default **Diode / Silicon** ADAA soft-clip), spectrum metering, aged hardware UI.
 
 ## What’s in this milestone
 
 - One-band saturator with adjustable linear-phase low/high cuts
+- **Diode** model: C¹ soft-clip + ADAA, Drive/makeup, Si/Ge/LED/Asym flavors
 - **Band** makeup (`outputDb`) — reserved for future per-band volume
 - Modeling reference **−18 dBFS** at plugin input (`LevelReference`) — use DAW gain to hit it for now
-- Model families: Diode, Tube, Tape, Transformer, Preamp (stubs; Diode default)
+- Model families: Diode (live), Tube / Tape / Transformer / Preamp (stubs)
 - Diode flavors (Si / Ge / LED / Asym) and Preamp flavors (Neve 1073 / API 512) wired in UI
 - Spectrum meter 20 Hz–20 kHz with in-band highlight + saturation heat placeholder
 - Offline DSP verifies (`tools/`)
 
 **Level contract:** aim plugin input RMS near −18 dBFS when authoring/evaluating models. See [`docs/architecture.md`](docs/architecture.md).
 
-Real clipper curves are intentionally empty — see [`docs/models/`](docs/models/).
+Diode curves are live — see [`docs/models/diode.md`](docs/models/diode.md). Other families are stubs.
 
 ## Setup
 
@@ -78,6 +79,9 @@ clang++ -std=c++17 -O2 -I Source tools/band_split_verify_main.cpp -o tools/band_
 
 clang++ -std=c++17 -O2 -I Source tools/engine_passthrough_verify_main.cpp -o tools/engine_passthrough_verify
 ./tools/engine_passthrough_verify
+
+clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diode_curve_verify
+./tools/diode_curve_verify
 ```
 
 See [`docs/testing.md`](docs/testing.md).

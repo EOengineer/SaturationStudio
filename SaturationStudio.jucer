@@ -32,6 +32,7 @@
           <FILE id="smH" name="SaturationModel.h" compile="0" resource="0" file="Source/dsp/models/SaturationModel.h"/>
           <FILE id="mrH" name="ModelRegistry.h" compile="0" resource="0" file="Source/dsp/models/ModelRegistry.h"/>
           <FILE id="dmH" name="DiodeModel.h" compile="0" resource="0" file="Source/dsp/models/DiodeModel.h"/>
+          <FILE id="dcH" name="DiodeCurve.h" compile="0" resource="0" file="Source/dsp/models/DiodeCurve.h"/>
           <FILE id="tmH" name="TubeModel.h" compile="0" resource="0" file="Source/dsp/models/TubeModel.h"/>
           <FILE id="tpH" name="TapeModel.h" compile="0" resource="0" file="Source/dsp/models/TapeModel.h"/>
           <FILE id="trH" name="TransformerModel.h" compile="0" resource="0" file="Source/dsp/models/TransformerModel.h"/>
@@ -40,6 +41,7 @@
         <GROUP id="SatSVer" name="verify">
           <FILE id="bvH" name="BandSplitVerify.h" compile="0" resource="0" file="Source/dsp/verify/BandSplitVerify.h"/>
           <FILE id="evH" name="EnginePassthroughVerify.h" compile="0" resource="0" file="Source/dsp/verify/EnginePassthroughVerify.h"/>
+          <FILE id="dvH" name="DiodeCurveVerify.h" compile="0" resource="0" file="Source/dsp/verify/DiodeCurveVerify.h"/>
         </GROUP>
       </GROUP>
       <GROUP id="SatSUi" name="ui">

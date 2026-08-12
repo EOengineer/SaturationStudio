@@ -14,13 +14,14 @@ Cost: **latency** ≈ `(N-1)/2` per FIR. We cascade HP then LP → about **1022 
 - HP via spectral inversion of an LPF at the same cutoff
 - Direct-form `FirFilter` + `DelayLine` for matching (**offline verifies**)
 
-**Realtime plugin path** (`LinearPhaseBandSplitRT.h`): same coeffs loaded into `juce::dsp::Convolution` with `Latency{0}` (FFT / partitioned). Direct-form 1023-tap FIR is too expensive for Logic-sized buffers.
+**Realtime plugin path** (`LinearPhaseBandSplitRT.h`): HP⋆LP cascaded into one bandpass IR, loaded into **two** convolvers (pre-split + post-sat). Cutoff changes update both IRs together.
 
 `LinearPhaseBandSplit` / RT:
 
-1. `mid = LP(HP(x))`
+1. `mid = bandpass_pre(x)` with `bandpass = HP⋆LP`
 2. `delayed = Delay(x, latency)`
 3. `outOfBand = delayed − mid`
+4. After saturation (in the engine): `wet = bandpass_post(sat(mid))` so new harmonics stay in-band when summed with `outOfBand`
 
 Algebraically, `mid + outOfBand == delayed` always. Musical transparency when the band is wide open means **mid ≈ delayed** (side energy near zero)—locked by the offline verify.
 

@@ -4,7 +4,8 @@
 
 /**
  * Oversampler for the nonlinear saturation island.
- * Default 4× high-quality half-band (same approach as AmpStudio).
+ * Default 4× linear-phase FIR half-band so mid/side/dry integer delay
+ * compensation stays phase-aligned (IIR OS caused mid↔side combing).
  */
 class Oversampler
 {
@@ -33,12 +34,15 @@ public:
             ++stages;
         }
 
+        // FIR equiripple = linear phase. useIntegerLatency MUST be true: otherwise
+        // getLatencyInSamples() is fractional, we truncate to int for side/dry delay,
+        // and mid↔side / wet↔dry comb ("everything sounds weird").
         oversampling = std::make_unique<juce::dsp::Oversampling<float>> (
             (size_t) baseSpec.numChannels,
             stages,
-            juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,
+            juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple,
             true,
-            false);
+            true);
 
         oversampling->initProcessing ((size_t) maxBlock);
         oversampling->reset();
@@ -62,7 +66,7 @@ public:
     {
         if (oversampling == nullptr)
             return 0;
-        return (int) oversampling->getLatencyInSamples();
+        return (int) std::round ((double) oversampling->getLatencyInSamples());
     }
 
     juce::dsp::AudioBlock<float> processSamplesUp (const juce::dsp::AudioBlock<float>& input)

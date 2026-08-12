@@ -12,14 +12,18 @@ clang++ -std=c++17 -O2 -I Source tools/band_split_verify_main.cpp -o tools/band_
 
 clang++ -std=c++17 -O2 -I Source tools/engine_passthrough_verify_main.cpp -o tools/engine_passthrough_verify
 ./tools/engine_passthrough_verify
+
+clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diode_curve_verify
+./tools/diode_curve_verify
 ```
 
-## What must pass (v1)
+## What must pass
 
 | Suite | Locks in |
 |-------|----------|
 | `band_split_verify` | FIR cascade latency, wide-open side≈0, impulse delay, narrow-band energy, cutoff clamp |
-| `engine_passthrough_verify` | Registry (5 families, Diode/Silicon default, Preamp flavors), diode stub null through split, factory default |
+| `engine_passthrough_verify` | Registry, Diode Drive=0 null through split, factory default |
+| `diode_curve_verify` | Drive=0 identity, Si harmonics at −18/Drive0.5, Asym even rise, Drive ramp, curve math |
 
 ## Adding tests for a new clipper
 

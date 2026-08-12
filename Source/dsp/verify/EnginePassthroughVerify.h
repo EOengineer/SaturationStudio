@@ -49,6 +49,8 @@ inline EngineReport runEnginePassthroughVerifications()
 
     DiodeModel diode;
     diode.prepare (sr, n, 1);
+    diode.setDrive (0.0f); // identity bypass
+    diode.reset();
 
     std::vector<float> in ((size_t) n, 0.0f);
     std::vector<float> mid ((size_t) n, 0.0f);
@@ -83,7 +85,7 @@ inline EngineReport runEnginePassthroughVerifications()
     }
     const double rel = ref > 1.0e-12 ? err / ref : err;
     std::ostringstream oss;
-    oss << "diode stub passthrough (no OS) relErr=" << rel;
+    oss << "diode Drive=0 passthrough (no OS) relErr=" << rel;
     if (rel < 1.0e-4)
         r.pass (oss.str());
     else
