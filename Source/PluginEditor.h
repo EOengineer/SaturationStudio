@@ -29,14 +29,14 @@ private:
     ModelPicker modelPicker;
     ParamHost paramHost;
 
-    juce::Slider lowCutSlider, highCutSlider, driveSlider, outputSlider, mixSlider;
-    juce::Label lowCutLabel, highCutLabel, driveLabel, outputLabel, mixLabel;
+    juce::Slider lowCutSlider, highCutSlider, driveSlider, bandSlider, mixSlider;
+    juce::Label lowCutLabel, highCutLabel, driveLabel, bandLabel, mixLabel;
 
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ComboAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 
     std::unique_ptr<SliderAttachment> lowCutAttachment, highCutAttachment, driveAttachment,
-                                      outputAttachment, mixAttachment;
+                                      bandAttachment, mixAttachment;
     std::unique_ptr<ComboAttachment> modelAttachment, diodeFlavorAttachment, preampFlavorAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SaturationStudioAudioProcessorEditor)

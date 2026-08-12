@@ -12,9 +12,10 @@
 class SpectrumAnalyzer
 {
 public:
-    static constexpr int kFftOrder = 11;
-    static constexpr int kFftSize = 1 << kFftOrder; // 2048
+    static constexpr int kFftOrder = 12;
+    static constexpr int kFftSize = 1 << kFftOrder; // 4096 — smoother lows, still cheap on UI thread
     static constexpr int kNumBins = kFftSize / 2;
+    static constexpr float kFloorDb = -90.0f;
 
     SpectrumAnalyzer()
         : fft (kFftOrder),
@@ -23,8 +24,11 @@ public:
         fifo.assign ((size_t) kFftSize, 0.0f);
         pendingFftData.assign ((size_t) kFftSize * 2, 0.0f);
         fftData.assign ((size_t) kFftSize * 2, 0.0f);
-        magnitudes.assign ((size_t) kNumBins, 0.0f);
-        magnitudesSmooth.assign ((size_t) kNumBins, 0.0f);
+        magnitudes.assign ((size_t) kNumBins, kFloorDb);
+        magnitudesSmooth.assign ((size_t) kNumBins, kFloorDb);
+
+        // Hann coherent gain ≈ 0.5 → compensate so 0 dBFS sine ≈ 0 dB on the meter
+        windowCompensation = 2.0f;
     }
 
     void prepare (double sampleRateIn)
@@ -32,7 +36,8 @@ public:
         sampleRate = sampleRateIn > 0.0 ? sampleRateIn : 48000.0;
         fifoIndex = 0;
         fftReady.store (false, std::memory_order_relaxed);
-        std::fill (magnitudesSmooth.begin(), magnitudesSmooth.end(), 0.0f);
+        std::fill (magnitudes.begin(), magnitudes.end(), kFloorDb);
+        std::fill (magnitudesSmooth.begin(), magnitudesSmooth.end(), kFloorDb);
     }
 
     /** Audio thread: push samples only — no FFT. */
@@ -54,12 +59,9 @@ public:
             if (++fifoIndex == kFftSize)
             {
                 fifoIndex = 0;
-                // Only overwrite pending buffer if UI has consumed the previous one
-                if (! fftReady.load (std::memory_order_acquire))
-                {
-                    std::copy (fifo.begin(), fifo.end(), pendingFftData.begin());
-                    fftReady.store (true, std::memory_order_release);
-                }
+                // Always keep the newest frame for the UI (drop if UI is behind)
+                std::copy (fifo.begin(), fifo.end(), pendingFftData.begin());
+                fftReady.store (true, std::memory_order_release);
             }
         }
     }
@@ -76,12 +78,14 @@ public:
         window.multiplyWithWindowingTable (fftData.data(), (size_t) kFftSize);
         fft.performFrequencyOnlyForwardTransform (fftData.data());
 
-        const float decay = 0.85f;
-        const float attack = 0.35f;
+        const float norm = windowCompensation / (float) kFftSize;
+        const float decay = 0.78f;
+        const float attack = 0.45f;
+
         for (int i = 0; i < kNumBins; ++i)
         {
-            const float mag = fftData[(size_t) i];
-            const float db = juce::Decibels::gainToDecibels (mag / (float) kFftSize, -100.0f);
+            const float mag = fftData[(size_t) i] * norm;
+            const float db = juce::Decibels::gainToDecibels (mag, kFloorDb);
             magnitudes[(size_t) i] = db;
             const float prev = magnitudesSmooth[(size_t) i];
             const float coeff = db > prev ? attack : decay;
@@ -91,9 +95,41 @@ public:
 
     void getMagnitudesDb (std::vector<float>& out) const
     {
-        out.resize ((size_t) kNumBins);
-        for (int i = 0; i < kNumBins; ++i)
-            out[(size_t) i] = magnitudesSmooth[(size_t) i];
+        out = magnitudesSmooth;
+    }
+
+    /** Linear-interpolated smoothed dB at an arbitrary frequency. */
+    float dbAtHz (float hz) const noexcept
+    {
+        if (sampleRate <= 0.0)
+            return kFloorDb;
+
+        const float binHz = (float) (sampleRate / (double) kFftSize);
+        const float bin = juce::jlimit (1.0f, (float) (kNumBins - 1) - 0.001f, hz / binHz);
+        const int i0 = (int) bin;
+        const float frac = bin - (float) i0;
+        const float a = magnitudesSmooth[(size_t) i0];
+        const float b = magnitudesSmooth[(size_t) juce::jmin (i0 + 1, kNumBins - 1)];
+        return a + frac * (b - a);
+    }
+
+    /**
+     * Peak in [hzLo, hzHi] via several interpolated samples (smoother than raw bin max).
+     */
+    float peakDbInRange (float hzLo, float hzHi) const noexcept
+    {
+        hzLo = juce::jmax (1.0f, hzLo);
+        hzHi = juce::jmax (hzLo, hzHi);
+
+        float peak = kFloorDb;
+        constexpr int kSubs = 6;
+        for (int s = 0; s < kSubs; ++s)
+        {
+            const float t = (kSubs == 1) ? 0.0f : (float) s / (float) (kSubs - 1);
+            const float hz = hzLo * std::pow (hzHi / hzLo, t);
+            peak = juce::jmax (peak, dbAtHz (hz));
+        }
+        return peak;
     }
 
     float binFrequency (int bin) const noexcept
@@ -121,5 +157,6 @@ private:
     int fifoIndex = 0;
     std::atomic<bool> fftReady { false };
     double sampleRate = 48000.0;
+    float windowCompensation = 2.0f;
     std::atomic<float> heat { 0.0f };
 };

@@ -7,10 +7,14 @@ v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology mo
 ## What’s in this milestone
 
 - One-band saturator with adjustable linear-phase low/high cuts
+- **Band** makeup (`outputDb`) — reserved for future per-band volume
+- Modeling reference **−18 dBFS** at plugin input (`LevelReference`) — use DAW gain to hit it for now
 - Model families: Diode, Tube, Tape, Transformer, Preamp (stubs; Diode default)
 - Diode flavors (Si / Ge / LED / Asym) and Preamp flavors (Neve 1073 / API 512) wired in UI
 - Spectrum meter 20 Hz–20 kHz with in-band highlight + saturation heat placeholder
 - Offline DSP verifies (`tools/`)
+
+**Level contract:** aim plugin input RMS near −18 dBFS when authoring/evaluating models. See [`docs/architecture.md`](docs/architecture.md).
 
 Real clipper curves are intentionally empty — see [`docs/models/`](docs/models/).
 

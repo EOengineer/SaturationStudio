@@ -8,13 +8,22 @@ Input
   → mid → 4× Oversample ↑ → SaturationModel → Oversample ↓
   → side delayed by OS latency
   → mid mix (wet/dry) + side
-  → output gain (dB)
+  → Band makeup (outputDb)   ← future per-band
   → SpectrumAnalyzer (UI)
 ```
 
-`SaturationEngine` owns the split, oversampler, active model, and mix/output.
+`SaturationEngine` owns the split, oversampler, active model, mix, and **band** `outputDb`.
 
 Latency reported to the host = FIR cascade group delay + oversampler latency.
+
+## Level contract
+
+| Stage | Meaning |
+|-------|---------|
+| Plugin input RMS ≈ **−18 dBFS** | Modeling reference — author diode/tube curves assuming this level into the sat (`LevelReference::kReferenceRmsDb`) |
+| Band (`outputDb`) | Makeup for the saturated band (becomes per-band later) |
+
+Hit −18 dBFS with **DAW clip/channel gain** into the plugin for now. In-plugin global trim / master / I/O meters are out of tree until we revisit them.
 
 ## Parameters (APVTS)
 
@@ -23,7 +32,7 @@ Latency reported to the host = FIR cascade group delay + oversampler latency.
 | `lowCutHz` / `highCutHz` | Linear-phase band edges |
 | `drive` | Reserved for clippers (ignored by stubs) |
 | `mix` | Wet amount on mid band |
-| `outputDb` | Makeup ±24 dB |
+| `outputDb` | **Band** makeup ±24 dB |
 | `satModel` | Family: Diode, Tube, Tape, Transformer, Preamp |
 | `diodeFlavor` | Silicon / Germanium / LED / Asymmetric |
 | `preampFlavor` | Neve 1073 / API 512 |
@@ -43,7 +52,8 @@ v1 default: **Diode / Silicon** identity stub.
 |-------|------|
 | Processor | `Source/PluginProcessor.*` |
 | Engine | `Source/dsp/SaturationEngine.h` |
-| Band split | `Source/dsp/LinearPhaseBandSplit.h`, `FirDesign.h` |
+| Band split | `Source/dsp/LinearPhaseBandSplit.h`, `LinearPhaseBandSplitRT.h`, `FirDesign.h` |
+| Level contract | `Source/dsp/LevelReference.h` |
 | OS | `Source/dsp/Oversampler.h` |
 | Models | `Source/dsp/models/` |
 | UI | `Source/ui/` |

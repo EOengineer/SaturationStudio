@@ -6,6 +6,7 @@ namespace ParamIDs
     inline constexpr const char* highCutHz = "highCutHz";
     inline constexpr const char* drive     = "drive";
     inline constexpr const char* mix       = "mix";
+    /** Band / sat makeup (future per-band). */
     inline constexpr const char* outputDb  = "outputDb";
     inline constexpr const char* satModel  = "satModel";
 

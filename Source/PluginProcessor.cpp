@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "dsp/LevelReference.h"
 #include "util/ParamIDs.h"
 
 SaturationStudioAudioProcessor::SaturationStudioAudioProcessor()
@@ -33,8 +34,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SaturationStudioAudioProcess
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 1.0f));
 
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
-        juce::ParameterID { ParamIDs::outputDb, 1 }, "Output",
-        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f));
+        juce::ParameterID { ParamIDs::outputDb, 1 }, "Band",
+        juce::NormalisableRange<float> (LevelReference::kBandOutputMinDb,
+                                        LevelReference::kBandOutputMaxDb, 0.01f),
+        0.0f));
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParamIDs::satModel, 1 }, "Model",
@@ -95,7 +98,7 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
     auto* high = apvts.getRawParameterValue (ParamIDs::highCutHz);
     auto* drive = apvts.getRawParameterValue (ParamIDs::drive);
     auto* mix = apvts.getRawParameterValue (ParamIDs::mix);
-    auto* out = apvts.getRawParameterValue (ParamIDs::outputDb);
+    auto* bandOut = apvts.getRawParameterValue (ParamIDs::outputDb);
     auto* model = apvts.getRawParameterValue (ParamIDs::satModel);
     auto* diode = apvts.getRawParameterValue (ParamIDs::diodeFlavor);
     auto* preamp = apvts.getRawParameterValue (ParamIDs::preampFlavor);
@@ -108,7 +111,7 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
     engine.setCutoffs (lowHz, highHz);
     engine.setDrive (drive != nullptr ? drive->load() : 0.5f);
     engine.setMix (mix != nullptr ? mix->load() : 1.0f);
-    engine.setOutputDb (out != nullptr ? out->load() : 0.0f);
+    engine.setOutputDb (bandOut != nullptr ? bandOut->load() : 0.0f);
     engine.setModelFamily (model != nullptr ? (int) model->load() : 0);
     engine.setDiodeFlavor (diode != nullptr ? (int) diode->load() : 0);
     engine.setPreampFlavor (preamp != nullptr ? (int) preamp->load() : 0);

@@ -13,13 +13,13 @@ SaturationStudioAudioProcessorEditor::SaturationStudioAudioProcessorEditor (Satu
     setupKnob (lowCutSlider, lowCutLabel, "Low Cut");
     setupKnob (highCutSlider, highCutLabel, "High Cut");
     setupKnob (driveSlider, driveLabel, "Drive");
-    setupKnob (outputSlider, outputLabel, "Output");
+    setupKnob (bandSlider, bandLabel, "Band");
     setupKnob (mixSlider, mixLabel, "Mix");
 
     lowCutAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::lowCutHz, lowCutSlider);
     highCutAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::highCutHz, highCutSlider);
     driveAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::drive, driveSlider);
-    outputAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::outputDb, outputSlider);
+    bandAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::outputDb, bandSlider);
     mixAttachment = std::make_unique<SliderAttachment> (processor.getAPVTS(), ParamIDs::mix, mixSlider);
 
     addAndMakeVisible (modelPicker);
@@ -96,7 +96,7 @@ void SaturationStudioAudioProcessorEditor::resized()
     auto r = getLocalBounds().reduced (16);
     r.removeFromTop (56); // brand
 
-    spectrum.setBounds (r.removeFromTop (140));
+    spectrum.setBounds (r.removeFromTop (150));
     r.removeFromTop (12);
 
     auto modelArea = r.removeFromLeft (200);
@@ -104,12 +104,12 @@ void SaturationStudioAudioProcessorEditor::resized()
     modelArea.removeFromTop (8);
     paramHost.setBounds (modelArea.removeFromTop (70));
 
-    r.removeFromLeft (16);
+    r.removeFromLeft (12);
     auto knobs = r.removeFromTop (220);
     const int knobW = knobs.getWidth() / 5;
     auto place = [&] (juce::Slider& s, juce::Label& lab)
     {
-        auto cell = knobs.removeFromLeft (knobW).reduced (6);
+        auto cell = knobs.removeFromLeft (knobW).reduced (4);
         lab.setBounds (cell.removeFromTop (22));
         s.setBounds (cell);
     };
@@ -117,5 +117,5 @@ void SaturationStudioAudioProcessorEditor::resized()
     place (highCutSlider, highCutLabel);
     place (driveSlider, driveLabel);
     place (mixSlider, mixLabel);
-    place (outputSlider, outputLabel);
+    place (bandSlider, bandLabel);
 }

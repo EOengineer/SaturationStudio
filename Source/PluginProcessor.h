@@ -47,7 +47,6 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void syncEngineFromParams();
-
     void updateLatencyIfNeeded();
 
     juce::AudioProcessorValueTreeState apvts;
