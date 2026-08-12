@@ -25,18 +25,18 @@ struct FlavorCoeffs
 
 inline FlavorCoeffs coeffsForFlavor (int flavor) noexcept
 {
-    // Tuned characters — not component datasheets.
+    // Tuned characters — not component datasheets. Lower a = earlier clip.
     switch (flavor)
     {
-        case 1: // Germanium — earlier, softer
-            return { 0.48f, 0.48f, 0.5f };
-        case 2: // LED — more headroom, then firmer grab
-            return { 1.25f, 1.25f, -0.5f };
+        case 1: // Germanium — earliest / softest
+            return { 0.34f, 0.34f, 0.5f };
+        case 2: // LED — more headroom than Si, then firmer grab
+            return { 0.78f, 0.78f, -0.35f };
         case 3: // Asymmetric — even harmonics
-            return { 0.95f, 0.55f, 0.25f };
+            return { 0.70f, 0.38f, 0.25f };
         case 0: // Silicon
         default:
-            return { 0.85f, 0.85f, 0.0f };
+            return { 0.55f, 0.55f, 0.0f };
     }
 }
 
@@ -70,12 +70,12 @@ inline float adaa (float x, float xPrev, const FlavorCoeffs& c) noexcept
     return shape (x, c);
 }
 
-/** Drive → linear gain. drive∈[0,1], k≈1.4 so 0.5 is gentle. */
+/** Drive → linear gain. Matches hotter Tape/Transformer family (~34 dB). */
 inline float driveGainLinear (float drive01) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
-    constexpr float kMaxDb = 24.0f;
-    constexpr float kCurve = 1.4f;
+    constexpr float kMaxDb = 34.0f;
+    constexpr float kCurve = 1.3f;
     const float t = std::pow (drive01, kCurve);
     const float db = kMaxDb * t;
     return std::pow (10.0f, db / 20.0f);
@@ -83,7 +83,7 @@ inline float driveGainLinear (float drive01) noexcept
 
 /**
  * Makeup so −18 dBFS RMS sine stays roughly level-stable vs Drive.
- * Uses a cheap peak-proxy through the static curve (no iteration).
+ * Partial compensation (like Tube) so Drive still feels denser, not “gain-matched dead”.
  */
 inline float makeupGainLinear (float drive01, const FlavorCoeffs& c) noexcept
 {
@@ -95,11 +95,10 @@ inline float makeupGainLinear (float drive01, const FlavorCoeffs& c) noexcept
     constexpr float kRefPeak = 0.177827941f; // 10^(-18/20)*sqrt(2)
     const float g = driveGainLinear (drive01);
     const float driven = kRefPeak * g;
-    const float shaped = shape (driven, c);
+    const float shaped = 0.5f * (std::abs (shape (driven, c)) + std::abs (shape (-driven, c)));
     const float ratio = shaped / std::max (kRefPeak, 1.0e-8f);
-    const float comp = 1.0f / std::max (ratio, 1.0e-3f);
-    // Blend: full compensation at high drive, light at low (keeps mild grit audible)
-    const float blend = std::pow (drive01, 0.85f);
+    const float comp = 1.0f / std::sqrt (std::max (ratio, 1.0e-3f));
+    const float blend = 0.40f * std::pow (drive01, 0.85f);
     const float makeup = 1.0f + blend * (comp - 1.0f);
     return makeup * std::pow (10.0f, c.makeupBiasDb / 20.0f);
 }

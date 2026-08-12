@@ -10,3 +10,5 @@ DerivedData/
 tools/band_split_verify
 tools/engine_passthrough_verify
 tools/diode_curve_verify
+tools/tube_curve_verify
+tools/family_curves_verify
