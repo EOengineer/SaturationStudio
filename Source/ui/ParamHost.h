@@ -27,7 +27,7 @@ public:
         flavorBox.setEnabled (true);
         flavorBox.setVisible (true);
         flavorLabel.setVisible (true);
-        hintLabel.setText ("Diode clipper family (curves coming soon)", juce::dontSendNotification);
+        hintLabel.setText ("Diode saturator — Drive into the knee; ADAA + 4× OS", juce::dontSendNotification);
     }
 
     void showPreampFlavors()

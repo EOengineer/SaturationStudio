@@ -11,7 +11,14 @@
 /**
  * Owns band split, oversampler island, and active saturation model.
  *
- * Path: split → (mid → OS↑ → model → OS↓) + (side delayed by OS latency) → mix → output.
+ * Path:
+ *   split (BP pre) → mid
+ *     → dry mid / side delayed by (OS + BP post)
+ *     → mid → OS↑ → model → OS↓ → BP post
+ *   → out = mix(wet, dryMid) + side
+ *
+ * Post-BP keeps clipper harmonics inside the selected band so they don’t comb
+ * against the bypassed out-of-band side (the “filters sound phasey at Mix=1” case).
  */
 class SaturationEngine
 {
@@ -35,6 +42,7 @@ public:
 
         oversampler.prepare (engineSpec, oversampleFactor);
         osLatency = oversampler.getLatencySamples();
+        postBpLatency = split.getPostLatencySamples();
 
         midBuffer.setSize (numChannels, maxBlock, false, true, true);
         sideBuffer.setSize (numChannels, maxBlock, false, true, true);
@@ -42,14 +50,14 @@ public:
         inputScratch.setSize (numChannels, maxBlock, false, true, true);
         osPtrs.resize ((size_t) numChannels);
 
-        resizeOsDelays();
+        resizeMatchDelays();
 
         if (model != nullptr)
             model->prepare (sampleRate * (double) oversampler.getFactor(),
                             maxBlock * (int) oversampler.getFactor(),
                             numChannels);
 
-        reportedLatency = split.getLatencySamples() + osLatency;
+        reportedLatency = split.getLatencySamples() + osLatency + postBpLatency;
         reset();
     }
 
@@ -59,9 +67,9 @@ public:
         oversampler.reset();
         if (model != nullptr)
             model->reset();
-        for (auto& d : osDelays)
+        for (auto& d : matchDelaysSide)
             d.reset();
-        for (auto& d : osDelaysDryMid)
+        for (auto& d : matchDelaysDryMid)
             d.reset();
         midBandRms = 0.0f;
     }
@@ -73,7 +81,9 @@ public:
         lowCutHz = lowHz;
         highCutHz = highHz;
         split.setCutoffs (lowCutHz, highCutHz);
-        reportedLatency = split.getLatencySamples() + osLatency;
+        postBpLatency = split.getPostLatencySamples();
+        resizeMatchDelays();
+        reportedLatency = split.getLatencySamples() + osLatency + postBpLatency;
     }
 
     void setDrive (float d)
@@ -135,7 +145,6 @@ public:
 
         const int nClamped = juce::jmin (n, maxBlock);
 
-        // Match prepared channel count for oversampler (pad mono → stereo if needed)
         inputScratch.clear();
         for (int c = 0; c < numChannels; ++c)
         {
@@ -170,14 +179,15 @@ public:
             midBandRms = midBandRms * 0.9f + rms * 0.1f;
         }
 
+        // Align dry mid + side to wet path: OS latency + post-BP latency
         for (int c = 0; c < numChannels; ++c)
         {
             float* side = sideBuffer.getWritePointer (c);
             float* dryMid = dryMidBuffer.getWritePointer (c);
             for (int i = 0; i < nClamped; ++i)
             {
-                side[i] = osDelays[(size_t) c].processSample (side[i]);
-                dryMid[i] = osDelaysDryMid[(size_t) c].processSample (dryMid[i]);
+                side[i] = matchDelaysSide[(size_t) c].processSample (side[i]);
+                dryMid[i] = matchDelaysDryMid[(size_t) c].processSample (dryMid[i]);
             }
         }
 
@@ -195,6 +205,9 @@ public:
             oversampler.processSamplesDown (midSub);
         }
 
+        // Keep saturated mid in-band before summing with side
+        split.processPostBandpass (midBuffer, nClamped);
+
         const float wet = mix;
         const float outGain = juce::Decibels::decibelsToGain (outputDb);
 
@@ -207,6 +220,7 @@ public:
             const float* side = sideBuffer.getReadPointer (src);
             for (int i = 0; i < nClamped; ++i)
             {
+                // delay_full + mix * (wet - dry)  with delay_full = dryMid + side
                 const float midMix = mid[i] * wet + dryMid[i] * (1.0f - wet);
                 out[i] = (midMix + side[i]) * outGain;
             }
@@ -214,28 +228,30 @@ public:
     }
 
 private:
-    void resizeOsDelays()
+    void resizeMatchDelays()
     {
-        osDelays.resize ((size_t) numChannels);
-        osDelaysDryMid.resize ((size_t) numChannels);
-        for (auto& d : osDelays)
-            d.setDelay (osLatency);
-        for (auto& d : osDelaysDryMid)
-            d.setDelay (osLatency);
+        const int match = osLatency + postBpLatency;
+        matchDelaysSide.resize ((size_t) numChannels);
+        matchDelaysDryMid.resize ((size_t) numChannels);
+        for (auto& d : matchDelaysSide)
+            d.setDelay (match);
+        for (auto& d : matchDelaysDryMid)
+            d.setDelay (match);
     }
 
     LinearPhaseBandSplitRT split;
     Oversampler oversampler;
     std::unique_ptr<SaturationModel> model;
     juce::AudioBuffer<float> midBuffer, sideBuffer, dryMidBuffer, inputScratch;
-    std::vector<fir::DelayLine> osDelays;
-    std::vector<fir::DelayLine> osDelaysDryMid;
+    std::vector<fir::DelayLine> matchDelaysSide;
+    std::vector<fir::DelayLine> matchDelaysDryMid;
     std::vector<float*> osPtrs;
 
     double sampleRate = 48000.0;
     int maxBlock = 512;
     int numChannels = 2;
     int osLatency = 0;
+    int postBpLatency = 0;
     int reportedLatency = 0;
     int currentFamily = 0;
     int diodeFlavor = 0;

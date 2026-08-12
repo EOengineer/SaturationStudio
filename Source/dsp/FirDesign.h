@@ -90,6 +90,21 @@ inline std::vector<float> designHighpass (int numTaps, double sampleRate, double
     return h;
 }
 
+/** Time-domain cascade of two FIRs (length Na+Nb-1). */
+inline std::vector<float> cascade (const std::vector<float>& a, const std::vector<float>& b)
+{
+    if (a.empty())
+        return b;
+    if (b.empty())
+        return a;
+
+    std::vector<float> y (a.size() + b.size() - 1, 0.0f);
+    for (size_t i = 0; i < a.size(); ++i)
+        for (size_t j = 0; j < b.size(); ++j)
+            y[i + j] += a[i] * b[j];
+    return y;
+}
+
 /** Direct-form FIR (linear phase when coeffs are symmetric). */
 class FirFilter
 {

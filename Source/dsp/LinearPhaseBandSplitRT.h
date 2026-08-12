@@ -8,17 +8,25 @@
 /**
  * Realtime linear-phase band split using juce::dsp::Convolution (FFT / partitioned).
  *
- * Cutoff changes are applied on the message thread via AsyncUpdater so the audio
- * thread never designs FIRs, allocates IRs, or re-prepares convolvers.
+ * Pre:  mid = BP(x), side = delayed(x) − mid
+ * Post: same BP IR on a second convolver — applied to wet mid after saturation so
+ *       clipper harmonics outside the band don’t comb against the bypassed side.
+ *
+ * One IR load updates both convolvers so cutoff changes stay matched.
  */
 class LinearPhaseBandSplitRT final : private juce::AsyncUpdater
 {
 public:
-    static constexpr int kNumTaps = fir::kDefaultNumTaps;
+    static constexpr int kNumTaps = fir::kDefaultNumTaps; // per prototype HP/LP
+
+    static int bandpassGroupDelay() noexcept
+    {
+        return 2 * ((kNumTaps - 1) / 2); // cascade of two odd-N linear-phase FIRs
+    }
 
     LinearPhaseBandSplitRT()
-        : hpConv (juce::dsp::Convolution::Latency { 0 }),
-          lpConv (juce::dsp::Convolution::Latency { 0 })
+        : bpPre (juce::dsp::Convolution::Latency { 0 }),
+          bpPost (juce::dsp::Convolution::Latency { 0 })
     {
     }
 
@@ -47,11 +55,11 @@ public:
         appliedHigh = high;
 
         rebuildFilters (low, high);
-        hpConv.prepare (spec);
-        lpConv.prepare (spec);
-        // Second prepare flushes the queued IR so process() starts with the new coeffs.
-        hpConv.prepare (spec);
-        lpConv.prepare (spec);
+        bpPre.prepare (spec);
+        bpPost.prepare (spec);
+        // Second prepare flushes queued IRs.
+        bpPre.prepare (spec);
+        bpPost.prepare (spec);
 
         updateLatency();
         for (auto& d : delays)
@@ -60,22 +68,18 @@ public:
             d.reset();
         }
 
-        hpConv.reset();
-        lpConv.reset();
+        bpPre.reset();
+        bpPost.reset();
     }
 
     void reset()
     {
-        hpConv.reset();
-        lpConv.reset();
+        bpPre.reset();
+        bpPost.reset();
         for (auto& d : delays)
             d.reset();
     }
 
-    /**
-     * Wait-free from the audio thread: stores targets and schedules a message-thread rebuild.
-     * During prepare (before audio runs) rebuilds synchronously.
-     */
     void setCutoffs (float lowHz, float highHz)
     {
         lowHz = juce::jlimit (20.0f, 2000.0f, lowHz);
@@ -86,7 +90,6 @@ public:
         pendingLow.store (lowHz, std::memory_order_relaxed);
         pendingHigh.store (highHz, std::memory_order_relaxed);
 
-        // Ignore sub-Hz chatter from parameter polling
         if (std::abs (lowHz - appliedLow) < 0.5f && std::abs (highHz - appliedHigh) < 0.5f)
             return;
 
@@ -97,13 +100,17 @@ public:
             return;
         }
 
-        // Coalesced: many knob moves → one handleAsyncUpdate with latest pending values
         triggerAsyncUpdate();
     }
 
     float getLowCutHz() const noexcept { return pendingLow.load (std::memory_order_relaxed); }
     float getHighCutHz() const noexcept { return pendingHigh.load (std::memory_order_relaxed); }
+
+    /** Pre-split complementary delay (BP group + engine latency). */
     int getLatencySamples() const noexcept { return latency; }
+
+    /** Extra delay of processPostBandpass (same BP group delay). */
+    int getPostLatencySamples() const noexcept { return bandpassGroupDelay() + bpPost.getLatency(); }
 
     void process (const juce::AudioBuffer<float>& input,
                   juce::AudioBuffer<float>& midOut,
@@ -121,8 +128,7 @@ public:
             juce::dsp::AudioBlock<float> block (workBuffer);
             juce::dsp::AudioBlock<float> sub = block.getSubBlock (0, (size_t) numSamples);
             juce::dsp::ProcessContextReplacing<float> ctx (sub);
-            hpConv.process (ctx);
-            lpConv.process (ctx);
+            bpPre.process (ctx);
         }
 
         for (int c = 0; c < chans; ++c)
@@ -142,6 +148,19 @@ public:
         }
     }
 
+    /** Same BP as the split, for wet mid after saturation (in-place). */
+    void processPostBandpass (juce::AudioBuffer<float>& io, int numSamples)
+    {
+        const int chans = juce::jmin (numChannels, io.getNumChannels());
+        if (numSamples <= 0 || chans <= 0 || ! prepared)
+            return;
+
+        juce::dsp::AudioBlock<float> block (io);
+        juce::dsp::AudioBlock<float> sub = block.getSubBlock (0, (size_t) numSamples);
+        juce::dsp::ProcessContextReplacing<float> ctx (sub);
+        bpPost.process (ctx);
+    }
+
 private:
     void handleAsyncUpdate() override
     {
@@ -156,9 +175,6 @@ private:
 
         appliedLow = low;
         appliedHigh = high;
-
-        // loadImpulseResponse is wait-free / background-processed; do not prepare/reset
-        // here — that was blowing Logic's CPU when twisting EQ knobs.
         rebuildFilters (low, high);
     }
 
@@ -166,9 +182,9 @@ private:
     {
         const auto hpCoeffs = fir::designHighpass (kNumTaps, sampleRate, (double) lowHz);
         const auto lpCoeffs = fir::designLowpass (kNumTaps, sampleRate, (double) highHz);
-
-        loadMonoOrStereoIr (hpConv, hpCoeffs);
-        loadMonoOrStereoIr (lpConv, lpCoeffs);
+        const auto bpCoeffs = fir::cascade (hpCoeffs, lpCoeffs);
+        loadMonoOrStereoIr (bpPre, bpCoeffs);
+        loadMonoOrStereoIr (bpPost, bpCoeffs);
     }
 
     void loadMonoOrStereoIr (juce::dsp::Convolution& conv, const std::vector<float>& coeffs)
@@ -189,12 +205,11 @@ private:
 
     void updateLatency()
     {
-        const int firGroup = 2 * ((kNumTaps - 1) / 2);
-        latency = firGroup + hpConv.getLatency() + lpConv.getLatency();
+        latency = bandpassGroupDelay() + bpPre.getLatency();
     }
 
-    juce::dsp::Convolution hpConv;
-    juce::dsp::Convolution lpConv;
+    juce::dsp::Convolution bpPre;
+    juce::dsp::Convolution bpPost;
     juce::AudioBuffer<float> workBuffer;
     std::vector<fir::DelayLine> delays;
 

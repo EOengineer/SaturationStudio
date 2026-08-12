@@ -4,7 +4,7 @@ SaturationStudio uses **topology families**, not named guitar pedals.
 
 | Family | Teaches toward tube amps | v1 |
 |--------|--------------------------|----|
-| **Diode** | Device I–V, soft vs hard knee, asymmetry | Silicon stub |
+| **Diode** | Device I–V feel, soft vs hard knee, asymmetry | Silicon ADAA soft-clip + flavors |
 | **Tube** | Smooth transfer, even harmonics, eventual triode stages | Stub |
 | **Tape** | Soft clip + HF loss / compression character | Stub |
 | **Transformer** | Hysteresis / memory nonlinearities | Stub |
