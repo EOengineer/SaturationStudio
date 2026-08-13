@@ -2,6 +2,7 @@
 
 #include "../models/DiodeCurve.h"
 #include "../models/DiodeModel.h"
+#include "../devices/DiodeDevice.h"
 #include "../LevelReference.h"
 #include "../../util/ParamIDs.h"
 #include <cmath>
@@ -45,6 +46,56 @@ inline DiodeCurveReport runDiodeCurveVerifications()
     constexpr double sr = 48000.0;
     constexpr int n = 8192;
     constexpr float kPi = 3.14159265358979323846f;
+
+    // --- Device: conductance matches finite-difference dI/dV ---
+    {
+        const auto d = devices::siliconSignal();
+        const float v = 0.4f;
+        const float eps = 1.0e-5f;
+        const float fd = (d.current (v + eps) - d.current (v - eps)) / (2.0f * eps);
+        const float g = d.conductance (v);
+        const float rel = std::abs (g - fd) / std::max (std::abs (fd), 1.0e-20f);
+        std::ostringstream oss;
+        oss << "Si conductance vs FD relErr=" << rel;
+        if (rel < 5.0e-3f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
+    // --- Device: Ge conducts earlier than Si; LED later (same I probe) ---
+    {
+        constexpr float iProbe = 1.0e-4f; // 0.1 mA
+        auto vfAt = [] (const devices::DiodeDevice& d, float iTarget) -> float
+        {
+            return d.nVt * std::log (iTarget / d.isat + 1.0f);
+        };
+        const float vfGe = vfAt (devices::germanium(), iProbe);
+        const float vfSi = vfAt (devices::siliconSignal(), iProbe);
+        const float vfLed = vfAt (devices::ledRed(), iProbe);
+        std::ostringstream oss;
+        oss << "Vf order Ge=" << vfGe << " Si=" << vfSi << " LED=" << vfLed;
+        if (vfGe < vfSi && vfSi < vfLed)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
+    // --- Clipper: small-signal ≈ identity, large-signal compresses ---
+    {
+        const auto setup = diode::setupForFlavor (DiodeFlavorIds::silicon);
+        const float small = setup.clipper.solve (0.05f);
+        const float bigIn = 5.0f;
+        const float big = setup.clipper.solve (bigIn);
+        const float smallErr = std::abs (small - 0.05f);
+        std::ostringstream oss;
+        oss << "clipper small=" << small << " big=" << big;
+        // Si pair + 1k should hold the node near ~Vf, far below Vin=5
+        if (smallErr < 1.0e-3f && big > 0.0f && big < 1.2f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
 
     // --- Drive≈0 identity ---
     {
@@ -97,7 +148,6 @@ inline DiodeCurveReport runDiodeCurveVerifications()
         float* chans[] = { buf.data() };
         m.process (chans, 1, n);
 
-        // Skip startup
         const float* x = buf.data() + 256;
         const int nn = n - 256;
         const double p1 = goertzelPower (x, nn, f0, sr);
@@ -157,9 +207,9 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // --- High Drive: stronger 3rd than Drive 0.5, finite ---
+    // --- High Drive: stronger relative 3rd than Drive 0.5, finite ---
     {
-        auto thirdAt = [&] (float drive) -> double
+        auto thirdRatioAt = [&] (float drive) -> double
         {
             DiodeModel m;
             m.prepare (sr, n, 1);
@@ -177,36 +227,74 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             for (float v : buf)
                 if (! std::isfinite (v))
                     return -1.0;
-            return goertzelPower (buf.data() + 256, n - 256, 3.0 * f0, sr);
+            const float* x = buf.data() + 256;
+            const int nn = n - 256;
+            const double p1 = goertzelPower (x, nn, f0, sr);
+            const double p3 = goertzelPower (x, nn, 3.0 * f0, sr);
+            if (p1 < 1.0e-18)
+                return -1.0;
+            return p3 / p1;
         };
 
-        const double h3lo = thirdAt (0.5f);
-        const double h3hi = thirdAt (1.0f);
+        const double rLo = thirdRatioAt (0.5f);
+        const double rHi = thirdRatioAt (1.0f);
         std::ostringstream oss;
-        oss << "Drive ramp H3(0.5)=" << h3lo << " H3(1.0)=" << h3hi;
-        if (h3lo < 0.0 || h3hi < 0.0)
+        oss << "Drive ramp H3/H1(0.5)=" << rLo << " H3/H1(1.0)=" << rHi;
+        if (rLo < 0.0 || rHi < 0.0)
             r.fail (oss.str() + " (NaN)");
-        else if (h3hi > h3lo * 1.5)
+        else if (rHi > rLo * 1.25)
             r.pass (oss.str());
         else
             r.fail (oss.str());
     }
 
-    // --- Curve math sanity: f'(0)≈1, |f| < |a| asymptote ---
+    // --- Clipper small-signal slope ≈ 1 ---
     {
-        const auto c = diode::coeffsForFlavor (DiodeFlavorIds::silicon);
+        const auto setup = diode::setupForFlavor (DiodeFlavorIds::silicon);
         const float eps = 1.0e-4f;
-        const float deriv = (diode::shape (eps, c) - diode::shape (-eps, c)) / (2.0f * eps);
-        if (std::abs (deriv - 1.0f) < 1.0e-3f)
-            r.pass ("shape derivative at 0 ≈ 1");
+        const float deriv = (setup.clipper.solve (eps) - setup.clipper.solve (-eps)) / (2.0f * eps);
+        if (std::abs (deriv - 1.0f) < 1.0e-2f)
+            r.pass ("clipper derivative at 0 ≈ 1");
         else
-            r.fail ("shape derivative at 0 not ≈ 1");
+            r.fail ("clipper derivative at 0 not ≈ 1");
+    }
 
-        const float big = diode::shape (100.0f, c);
-        if (big < c.aPos && big > 0.0f)
-            r.pass ("shape asymptote under aPos");
-        else
-            r.fail ("shape asymptote check");
+    // --- High Drive + hot input: audible & finite (regresses Newton plateau silence) ---
+    {
+        for (int flavor : { DiodeFlavorIds::silicon, DiodeFlavorIds::germanium,
+                            DiodeFlavorIds::led, DiodeFlavorIds::asymmetric })
+        {
+            DiodeModel m;
+            m.prepare (sr, n, 1);
+            m.setDrive (1.0f);
+            m.setDiodeFlavor (flavor);
+            m.reset();
+
+            std::vector<float> buf ((size_t) n);
+            for (int i = 0; i < n; ++i)
+                buf[(size_t) i] = 0.9f * std::sin (2.0f * kPi * 1000.0f * (float) i / (float) sr);
+
+            float* chans[] = { buf.data() };
+            m.process (chans, 1, n);
+
+            float peak = 0.0f;
+            bool finite = true;
+            for (float v : buf)
+            {
+                if (! std::isfinite (v))
+                    finite = false;
+                peak = std::max (peak, std::abs (v));
+            }
+
+            std::ostringstream oss;
+            oss << "Drive1 hot flavor=" << flavor << " peak=" << peak;
+            if (! finite)
+                r.fail (oss.str() + " (NaN/Inf)");
+            else if (peak < 0.05f)
+                r.fail (oss.str() + " (near silence)");
+            else
+                r.pass (oss.str());
+        }
     }
 
     return r;

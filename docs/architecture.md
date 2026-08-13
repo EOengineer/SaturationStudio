@@ -34,7 +34,7 @@ Hit −18 dBFS with **DAW clip/channel gain** into the plugin for now. In-plugin
 |----|------|
 | `lowCutHz` / `highCutHz` | Linear-phase band edges |
 | `drive` | Diode / Tube: push into clip knee (0…~24 dB). Other families: reserved |
-| `mix` | Wet amount on mid band |
+| `mix` | Wet/dry blend on mid band (0 = delayed dry mid, 1 = saturated) |
 | `outputDb` | **Band** makeup ±24 dB |
 | `satModel` | Family: Diode, Tube, Tape, Transformer, Preamp |
 | `diodeFlavor` | Silicon / Germanium / LED / Asymmetric |
@@ -47,7 +47,7 @@ Cutoff invariant: `lowCutHz < highCutHz` (clamped in engine / processor).
 `SaturationModel` is a small interface (`prepare` / `reset` / `process` at oversampled rate).  
 `ModelRegistry` lists families + flavors for the UI and constructs instances.
 
-Default: **Diode / Silicon** — ADAA soft-clip (see `docs/models/diode.md`). All five families are live waveshapers (Tape / Transformer / Preamp: `docs/models/tape.md`, `transformer.md`, `preamp.md`).
+Default: **Diode / Silicon** — Shockley antiparallel clipper (see `docs/models/diode.md`). Tube / Tape / Transformer / Preamp remain ADAA waveshapers (`docs/models/*.md`).
 
 ## Key source map
 

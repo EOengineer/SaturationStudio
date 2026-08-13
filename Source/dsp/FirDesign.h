@@ -167,7 +167,11 @@ class DelayLine
 public:
     void setDelay (int samples)
     {
-        delaySamples = std::max (0, samples);
+        samples = std::max (0, samples);
+        if (samples == delaySamples && (int) buffer.size() == samples + 1)
+            return; // keep history — callers may hit this every block
+
+        delaySamples = samples;
         buffer.assign ((size_t) delaySamples + 1, 0.0f);
         write = 0;
     }

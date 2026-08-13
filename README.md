@@ -2,12 +2,12 @@
 
 JUCE **AU + VST3** plugin: frequency-selective analog-modeled saturation (multiband-ready shell).
 
-v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology model registry (default **Diode / Silicon** ADAA soft-clip), spectrum metering, aged hardware UI.
+v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology model registry (default **Diode / Silicon** Shockley clipper), spectrum metering, aged hardware UI.
 
 ## What’s in this milestone
 
 - One-band saturator with adjustable linear-phase low/high cuts
-- **Diode** model: C¹ soft-clip + ADAA, Drive/makeup, Si/Ge/LED/Asym flavors
+- **Diode** model: Shockley `DiodeDevice` + static antiparallel clipper, Drive/makeup, Si/Ge/LED/Asym flavors
 - **Tube** model: asymmetric tanh + ADAA (even-heavy), same Drive/−18 contract
 - **Tape / Transformer / Preamp** models: same methodology (symmetric soft / iron asym / 1073·API flavors)
 - **Band** makeup (`outputDb`) — reserved for future per-band volume
@@ -110,7 +110,7 @@ See [`docs/testing.md`](docs/testing.md).
 | [`docs/anti-aliasing.md`](docs/anti-aliasing.md) | Oversampling / ADAA |
 | [`docs/testing.md`](docs/testing.md) | Verify suite |
 | [`docs/models/overview.md`](docs/models/overview.md) | Topology roadmap → tube amps |
-| [`docs/models/diode.md`](docs/models/diode.md) | Diode ADAA soft-clip |
+| [`docs/models/diode.md`](docs/models/diode.md) | Shockley diode + antiparallel clipper |
 | [`docs/models/tube.md`](docs/models/tube.md) | Tube asymmetric tanh |
 | [`docs/models/tape.md`](docs/models/tape.md) | Tape soft symmetric |
 | [`docs/models/transformer.md`](docs/models/transformer.md) | Transformer iron (no hysteresis yet) |
