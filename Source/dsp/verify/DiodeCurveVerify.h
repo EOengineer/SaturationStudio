@@ -5,6 +5,7 @@
 #include "../devices/DiodeDevice.h"
 #include "../devices/AntiParallelClipper.h"
 #include "../devices/AntiParallelRcClipper.h"
+#include "../devices/FeedbackDiodeClipper.h"
 #include "../LevelReference.h"
 #include "../../util/ParamIDs.h"
 #include <cmath>
@@ -292,11 +293,57 @@ inline DiodeCurveReport runDiodeCurveVerifications()
         }
         std::ostringstream oss;
         oss << "RC post-impulse energy=" << eRc << " static=" << eStatic;
-        // Capacitor holds charge; resistive net returns ~0 when Vin=0
         if (eRc > 1.0e-4 && eRc > eStatic * 10.0)
             r.pass (oss.str());
         else
             r.fail (oss.str());
+    }
+
+    // --- Feedback vs RC: DC transfers differ at same Vin (topology fingerprint) ---
+    {
+        auto fb = diode::setupForFlavor (DiodeFlavorIds::silicon).clipper;
+        devices::AntiParallelRcClipper rc;
+        rc.dPos = devices::siliconSignal();
+        rc.dNeg = devices::siliconSignal();
+        rc.rs = 1000.0f;
+        rc.c = 4.7e-9f;
+        const float vin = 2.0f;
+        const float yFb = fb.solveDc (vin);
+        const float yRc = rc.solveDc (vin);
+        std::ostringstream oss;
+        oss << "FB DC=" << yFb << " RC DC=" << yRc;
+        if (std::abs (yFb - yRc) > 0.05f && std::abs (yFb) > 0.1f && std::abs (yRc) > 0.1f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
+    // --- Feedback Cf: post-impulse residual (dynamic) vs DC reopen ---
+    {
+        constexpr float fs = 192000.0f;
+        constexpr int nn = 2048;
+        devices::FeedbackDiodeClipper fb;
+        fb.dPos = devices::siliconSignal();
+        fb.dNeg = devices::siliconSignal();
+        fb.prepare ((double) fs);
+        devices::FeedbackDiodeClipper::State st {};
+        double eAfter = 0.0;
+        bool finite = true;
+        for (int i = 0; i < nn; ++i)
+        {
+            const float vin = (i == 128) ? 5.0f : 0.0f;
+            const float y = fb.process (vin, st);
+            if (! std::isfinite (y))
+                finite = false;
+            if (i > 128)
+                eAfter += (double) y * (double) y;
+        }
+        std::ostringstream oss;
+        oss << "FB post-impulse energy=" << eAfter;
+        if (finite && eAfter > 1.0e-6)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str() + (finite ? "" : " (NaN)"));
     }
 
     // --- High Drive + hot input: audible & finite (regresses Newton plateau silence) ---

@@ -1,30 +1,30 @@
 #pragma once
 
-#include "../devices/AntiParallelRcClipper.h"
+#include "../devices/FeedbackDiodeClipper.h"
 #include "../devices/DiodeDevice.h"
 #include "../../util/ParamIDs.h"
 #include <algorithm>
 #include <cmath>
 
 /**
- * Diode-family saturator helpers: flavor → RC clipper devices, Drive/makeup.
- * Nonlinear transfer is Shockley antiparallel + shunt C (trapezoidal), not an
- * algebraic soft-clip. Anti-aliasing relies on the engine 4× OS island
- * (no analytic ADAA for the Newton transfer).
+ * Diode-family saturator helpers: flavor → feedback clipper, Drive/makeup.
+ * Nonlinear transfer is ideal-OA inverting soft-clip (Shockley FB diodes + Cf).
+ * Anti-aliasing relies on the engine 4× OS island (no analytic ADAA).
  */
 namespace diode
 {
 struct FlavorSetup
 {
-    devices::AntiParallelRcClipper clipper;
+    devices::FeedbackDiodeClipper clipper;
     float makeupBiasDb = 0.0f;
 };
 
 inline FlavorSetup setupForFlavor (int flavor) noexcept
 {
     FlavorSetup s;
-    s.clipper.rs = 1000.0f;
-    s.clipper.c = 4.7e-9f; // 4.7 nF — audible edge softening, grit at −18 OK
+    s.clipper.rin = 10000.0f;
+    s.clipper.rf  = 10000.0f;
+    s.clipper.cf  = 100.0e-12f;
 
     switch (flavor)
     {
@@ -39,7 +39,6 @@ inline FlavorSetup setupForFlavor (int flavor) noexcept
             s.makeupBiasDb = -0.35f;
             break;
         case DiodeFlavorIds::asymmetric:
-            // Neg side conducts earlier (Ge) → even harmonics
             s.clipper.dPos = devices::siliconSignal();
             s.clipper.dNeg = devices::germanium();
             s.makeupBiasDb = 0.25f;
@@ -55,13 +54,12 @@ inline FlavorSetup setupForFlavor (int flavor) noexcept
     return s;
 }
 
-/** DC clipper transfer (C open) for makeup / verifies. */
-inline float shape (float x, const devices::AntiParallelRcClipper& clip) noexcept
+/** DC clipper transfer (Cf open), audio polarity. */
+inline float shape (float x, const devices::FeedbackDiodeClipper& clip) noexcept
 {
     return clip.solveDc (x);
 }
 
-/** Drive → linear gain. Matches hotter Tape/Transformer family (~34 dB). */
 inline float driveGainLinear (float drive01) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
@@ -72,17 +70,13 @@ inline float driveGainLinear (float drive01) noexcept
     return std::pow (10.0f, db / 20.0f);
 }
 
-/**
- * Makeup so −18 dBFS RMS sine stays roughly level-stable vs Drive.
- * Uses DC clip solve (capacitor open) — same knee as resistive net.
- */
 inline float makeupGainLinear (float drive01, const FlavorSetup& setup) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
     if (drive01 < 1.0e-6f)
         return std::pow (10.0f, setup.makeupBiasDb / 20.0f);
 
-    constexpr float kRefPeak = 0.177827941f; // 10^(-18/20)*sqrt(2)
+    constexpr float kRefPeak = 0.177827941f;
     const float g = driveGainLinear (drive01);
     const float driven = kRefPeak * g;
     const float shaped = 0.5f * (std::abs (setup.clipper.solveDc (driven))

@@ -32,6 +32,7 @@
           <FILE id="ddH" name="DiodeDevice.h" compile="0" resource="0" file="Source/dsp/devices/DiodeDevice.h"/>
           <FILE id="acH" name="AntiParallelClipper.h" compile="0" resource="0" file="Source/dsp/devices/AntiParallelClipper.h"/>
           <FILE id="arcH" name="AntiParallelRcClipper.h" compile="0" resource="0" file="Source/dsp/devices/AntiParallelRcClipper.h"/>
+          <FILE id="fdcH" name="FeedbackDiodeClipper.h" compile="0" resource="0" file="Source/dsp/devices/FeedbackDiodeClipper.h"/>
         </GROUP>
         <GROUP id="SatSMod" name="models">
           <FILE id="smH" name="SaturationModel.h" compile="0" resource="0" file="Source/dsp/models/SaturationModel.h"/>
