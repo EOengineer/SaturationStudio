@@ -3,6 +3,8 @@
 #include "../models/DiodeCurve.h"
 #include "../models/DiodeModel.h"
 #include "../devices/DiodeDevice.h"
+#include "../devices/AntiParallelClipper.h"
+#include "../devices/AntiParallelRcClipper.h"
 #include "../LevelReference.h"
 #include "../../util/ParamIDs.h"
 #include <cmath>
@@ -81,16 +83,15 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // --- Clipper: small-signal ≈ identity, large-signal compresses ---
+    // --- Clipper DC: small-signal ≈ identity, large-signal compresses ---
     {
         const auto setup = diode::setupForFlavor (DiodeFlavorIds::silicon);
-        const float small = setup.clipper.solve (0.05f);
+        const float small = setup.clipper.solveDc (0.05f);
         const float bigIn = 5.0f;
-        const float big = setup.clipper.solve (bigIn);
+        const float big = setup.clipper.solveDc (bigIn);
         const float smallErr = std::abs (small - 0.05f);
         std::ostringstream oss;
-        oss << "clipper small=" << small << " big=" << big;
-        // Si pair + 1k should hold the node near ~Vf, far below Vin=5
+        oss << "clipper DC small=" << small << " big=" << big;
         if (smallErr < 1.0e-3f && big > 0.0f && big < 1.2f)
             r.pass (oss.str());
         else
@@ -248,15 +249,54 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // --- Clipper small-signal slope ≈ 1 ---
+    // --- Clipper DC small-signal slope ≈ 1 ---
     {
         const auto setup = diode::setupForFlavor (DiodeFlavorIds::silicon);
         const float eps = 1.0e-4f;
-        const float deriv = (setup.clipper.solve (eps) - setup.clipper.solve (-eps)) / (2.0f * eps);
+        const float deriv = (setup.clipper.solveDc (eps) - setup.clipper.solveDc (-eps)) / (2.0f * eps);
         if (std::abs (deriv - 1.0f) < 1.0e-2f)
-            r.pass ("clipper derivative at 0 ≈ 1");
+            r.pass ("clipper DC derivative at 0 ≈ 1");
         else
-            r.fail ("clipper derivative at 0 not ≈ 1");
+            r.fail ("clipper DC derivative at 0 not ≈ 1");
+    }
+
+    // --- RC vs static: impulse leaves residual on C (static settles immediately) ---
+    {
+        constexpr float fs = 192000.0f;
+        constexpr int nn = 2048;
+        devices::AntiParallelClipper staticClip;
+        staticClip.dPos = devices::siliconSignal();
+        staticClip.dNeg = devices::siliconSignal();
+        staticClip.rs = 1000.0f;
+
+        devices::AntiParallelRcClipper rcClip;
+        rcClip.dPos = devices::siliconSignal();
+        rcClip.dNeg = devices::siliconSignal();
+        rcClip.rs = 1000.0f;
+        rcClip.c = 4.7e-9f;
+        rcClip.prepare ((double) fs);
+
+        devices::AntiParallelRcClipper::State st {};
+        float prev = 0.0f;
+        double eStatic = 0.0, eRc = 0.0;
+        for (int i = 0; i < nn; ++i)
+        {
+            const float vin = (i == 128) ? 5.0f : 0.0f;
+            const float ys = staticClip.process (vin, prev);
+            const float yr = rcClip.process (vin, st);
+            if (i > 128)
+            {
+                eStatic += (double) ys * (double) ys;
+                eRc += (double) yr * (double) yr;
+            }
+        }
+        std::ostringstream oss;
+        oss << "RC post-impulse energy=" << eRc << " static=" << eStatic;
+        // Capacitor holds charge; resistive net returns ~0 when Vin=0
+        if (eRc > 1.0e-4 && eRc > eStatic * 10.0)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
     }
 
     // --- High Drive + hot input: audible & finite (regresses Newton plateau silence) ---

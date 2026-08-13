@@ -27,7 +27,7 @@ public:
         flavorBox.setEnabled (true);
         flavorBox.setVisible (true);
         flavorLabel.setVisible (true);
-        hintLabel.setText ("Diode saturator — Shockley clipper + 4× OS", juce::dontSendNotification);
+        hintLabel.setText ("Diode saturator — Shockley RC clipper + 4× OS", juce::dontSendNotification);
     }
 
     void showPreampFlavors()
