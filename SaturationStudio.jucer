@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="SatS001" name="SaturationStudio" projectType="audioplug" version="0.1.0"
+<JUCERPROJECT id="SatS001" name="SaturationStudio" projectType="audioplug" version="0.1.1"
               bundleIdentifier="com.saturationstudio.SaturationStudio" companyName="SaturationStudio"
               companyWebsite="https://example.com" companyCopyright="SaturationStudio"
               pluginManufacturerCode="SatS" pluginCode="Sat1"
@@ -34,14 +34,20 @@
           <FILE id="dmH" name="DiodeModel.h" compile="0" resource="0" file="Source/dsp/models/DiodeModel.h"/>
           <FILE id="dcH" name="DiodeCurve.h" compile="0" resource="0" file="Source/dsp/models/DiodeCurve.h"/>
           <FILE id="tmH" name="TubeModel.h" compile="0" resource="0" file="Source/dsp/models/TubeModel.h"/>
+          <FILE id="tcH" name="TubeCurve.h" compile="0" resource="0" file="Source/dsp/models/TubeCurve.h"/>
           <FILE id="tpH" name="TapeModel.h" compile="0" resource="0" file="Source/dsp/models/TapeModel.h"/>
+          <FILE id="tpcH" name="TapeCurve.h" compile="0" resource="0" file="Source/dsp/models/TapeCurve.h"/>
           <FILE id="trH" name="TransformerModel.h" compile="0" resource="0" file="Source/dsp/models/TransformerModel.h"/>
+          <FILE id="trcH" name="TransformerCurve.h" compile="0" resource="0" file="Source/dsp/models/TransformerCurve.h"/>
           <FILE id="pmH" name="PreampModel.h" compile="0" resource="0" file="Source/dsp/models/PreampModel.h"/>
+          <FILE id="pmcH" name="PreampCurve.h" compile="0" resource="0" file="Source/dsp/models/PreampCurve.h"/>
         </GROUP>
         <GROUP id="SatSVer" name="verify">
           <FILE id="bvH" name="BandSplitVerify.h" compile="0" resource="0" file="Source/dsp/verify/BandSplitVerify.h"/>
           <FILE id="evH" name="EnginePassthroughVerify.h" compile="0" resource="0" file="Source/dsp/verify/EnginePassthroughVerify.h"/>
           <FILE id="dvH" name="DiodeCurveVerify.h" compile="0" resource="0" file="Source/dsp/verify/DiodeCurveVerify.h"/>
+          <FILE id="tvH" name="TubeCurveVerify.h" compile="0" resource="0" file="Source/dsp/verify/TubeCurveVerify.h"/>
+          <FILE id="fvH" name="FamilyCurvesVerify.h" compile="0" resource="0" file="Source/dsp/verify/FamilyCurvesVerify.h"/>
         </GROUP>
       </GROUP>
       <GROUP id="SatSUi" name="ui">

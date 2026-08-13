@@ -23,7 +23,7 @@ Latency reported to the host = FIR cascade group delay + oversampler latency.
 | Stage | Meaning |
 |-------|---------|
 | Plugin input RMS ≈ **−18 dBFS** | Modeling reference (`LevelReference::kReferenceRmsDb`) |
-| Drive (Diode) | Input gain into the knee; ~0.5 = mostly clean at −18; makeup stabilizes loudness |
+| Drive (Diode / Tube) | Input gain into the knee; ~0.5 = mostly clean at −18; makeup stabilizes loudness |
 | Band (`outputDb`) | Makeup for the saturated band (becomes per-band later) |
 
 Hit −18 dBFS with **DAW clip/channel gain** into the plugin for now. In-plugin global trim / master / I/O meters are out of tree until we revisit them.
@@ -33,7 +33,7 @@ Hit −18 dBFS with **DAW clip/channel gain** into the plugin for now. In-plugin
 | ID | Role |
 |----|------|
 | `lowCutHz` / `highCutHz` | Linear-phase band edges |
-| `drive` | Diode: push into clip knee (0…~24 dB). Other families: reserved |
+| `drive` | Diode / Tube: push into clip knee (0…~24 dB). Other families: reserved |
 | `mix` | Wet amount on mid band |
 | `outputDb` | **Band** makeup ±24 dB |
 | `satModel` | Family: Diode, Tube, Tape, Transformer, Preamp |
@@ -47,7 +47,7 @@ Cutoff invariant: `lowCutHz < highCutHz` (clamped in engine / processor).
 `SaturationModel` is a small interface (`prepare` / `reset` / `process` at oversampled rate).  
 `ModelRegistry` lists families + flavors for the UI and constructs instances.
 
-Default: **Diode / Silicon** — ADAA soft-clip (see `docs/models/diode.md`). Other families remain stubs.
+Default: **Diode / Silicon** — ADAA soft-clip (see `docs/models/diode.md`). All five families are live waveshapers (Tape / Transformer / Preamp: `docs/models/tape.md`, `transformer.md`, `preamp.md`).
 
 ## Key source map
 

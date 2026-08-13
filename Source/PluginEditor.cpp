@@ -53,25 +53,37 @@ void SaturationStudioAudioProcessorEditor::refreshFlavorHost()
     diodeFlavorAttachment.reset();
     preampFlavorAttachment.reset();
 
-    const int family = modelPicker.getCombo().getSelectedItemIndex();
+    // Prefer APVTS (choice index) over ComboBox selection — avoids -1 / stale UI.
+    int family = 0;
+    if (auto* raw = processor.getAPVTS().getRawParameterValue (ParamIDs::satModel))
+        family = juce::roundToInt (raw->load());
+
     auto& box = paramHost.getFlavorBox();
 
-    if (family == 0)
+    switch (family)
     {
-        paramHost.showDiodeFlavors();
-        diodeFlavorAttachment = std::make_unique<ComboAttachment> (
-            processor.getAPVTS(), ParamIDs::diodeFlavor, box);
-    }
-    else if (family == 4)
-    {
-        paramHost.showPreampFlavors();
-        preampFlavorAttachment = std::make_unique<ComboAttachment> (
-            processor.getAPVTS(), ParamIDs::preampFlavor, box);
-    }
-    else
-    {
-        const auto name = modelPicker.getCombo().getText();
-        paramHost.showComingSoon (name);
+        case 0:
+            paramHost.showDiodeFlavors();
+            diodeFlavorAttachment = std::make_unique<ComboAttachment> (
+                processor.getAPVTS(), ParamIDs::diodeFlavor, box);
+            break;
+        case 1:
+            paramHost.showTubeLive();
+            break;
+        case 2:
+            paramHost.showTapeLive();
+            break;
+        case 3:
+            paramHost.showTransformerLive();
+            break;
+        case 4:
+            paramHost.showPreampFlavors();
+            preampFlavorAttachment = std::make_unique<ComboAttachment> (
+                processor.getAPVTS(), ParamIDs::preampFlavor, box);
+            break;
+        default:
+            paramHost.showTubeLive(); // should not happen; keep UI out of stub messaging
+            break;
     }
 
     paramHost.resized();

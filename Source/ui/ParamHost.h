@@ -37,14 +37,40 @@ public:
         flavorBox.setEnabled (true);
         flavorBox.setVisible (true);
         flavorLabel.setVisible (true);
-        hintLabel.setText ("Console preamp character (coming soon)", juce::dontSendNotification);
+        hintLabel.setText ("Preamp saturator — 1073 round / API punch; ADAA + 4× OS",
+                           juce::dontSendNotification);
     }
 
-    void showComingSoon (const juce::String& familyName)
+    void showTubeLive()
     {
         flavorBox.setVisible (false);
         flavorLabel.setVisible (false);
-        hintLabel.setText (familyName + " model — coming soon (passthrough stub)", juce::dontSendNotification);
+        hintLabel.setText ("Tube saturator — asymmetric tanh, even harmonics; ADAA + 4× OS",
+                           juce::dontSendNotification);
+    }
+
+    void showTapeLive()
+    {
+        flavorBox.setVisible (false);
+        flavorLabel.setVisible (false);
+        hintLabel.setText ("Tape saturator — soft symmetric clip, odd-leaning; ADAA + 4× OS",
+                           juce::dontSendNotification);
+    }
+
+    void showTransformerLive()
+    {
+        flavorBox.setVisible (false);
+        flavorLabel.setVisible (false);
+        hintLabel.setText ("Transformer saturator — asymmetric iron feel (no hysteresis yet); ADAA + 4× OS",
+                           juce::dontSendNotification);
+    }
+
+    void showComingSoon (const juce::String& /*familyName*/)
+    {
+        // Kept for API compat; all five families are live — never show stub copy.
+        flavorBox.setVisible (false);
+        flavorLabel.setVisible (false);
+        hintLabel.setText ({}, juce::dontSendNotification);
     }
 
     void resized() override

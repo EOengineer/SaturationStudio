@@ -8,16 +8,18 @@ v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology mo
 
 - One-band saturator with adjustable linear-phase low/high cuts
 - **Diode** model: C¹ soft-clip + ADAA, Drive/makeup, Si/Ge/LED/Asym flavors
+- **Tube** model: asymmetric tanh + ADAA (even-heavy), same Drive/−18 contract
+- **Tape / Transformer / Preamp** models: same methodology (symmetric soft / iron asym / 1073·API flavors)
 - **Band** makeup (`outputDb`) — reserved for future per-band volume
 - Modeling reference **−18 dBFS** at plugin input (`LevelReference`) — use DAW gain to hit it for now
-- Model families: Diode (live), Tube / Tape / Transformer / Preamp (stubs)
+- Model families: Diode, Tube, Tape, Transformer, Preamp (all live waveshapers)
 - Diode flavors (Si / Ge / LED / Asym) and Preamp flavors (Neve 1073 / API 512) wired in UI
 - Spectrum meter 20 Hz–20 kHz with in-band highlight + saturation heat placeholder
 - Offline DSP verifies (`tools/`)
 
 **Level contract:** aim plugin input RMS near −18 dBFS when authoring/evaluating models. See [`docs/architecture.md`](docs/architecture.md).
 
-Diode curves are live — see [`docs/models/diode.md`](docs/models/diode.md). Other families are stubs.
+All five family curves are live — see [`docs/models/`](docs/models/).
 
 ## Setup
 
@@ -82,6 +84,12 @@ clang++ -std=c++17 -O2 -I Source tools/engine_passthrough_verify_main.cpp -o too
 
 clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diode_curve_verify
 ./tools/diode_curve_verify
+
+clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
+./tools/tube_curve_verify
+
+clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/family_curves_verify
+./tools/family_curves_verify
 ```
 
 See [`docs/testing.md`](docs/testing.md).
@@ -102,4 +110,8 @@ See [`docs/testing.md`](docs/testing.md).
 | [`docs/anti-aliasing.md`](docs/anti-aliasing.md) | Oversampling / ADAA |
 | [`docs/testing.md`](docs/testing.md) | Verify suite |
 | [`docs/models/overview.md`](docs/models/overview.md) | Topology roadmap → tube amps |
-| [`docs/models/diode.md`](docs/models/diode.md) | Diode stub + AmpStudio map |
+| [`docs/models/diode.md`](docs/models/diode.md) | Diode ADAA soft-clip |
+| [`docs/models/tube.md`](docs/models/tube.md) | Tube asymmetric tanh |
+| [`docs/models/tape.md`](docs/models/tape.md) | Tape soft symmetric |
+| [`docs/models/transformer.md`](docs/models/transformer.md) | Transformer iron (no hysteresis yet) |
+| [`docs/models/preamp.md`](docs/models/preamp.md) | Preamp 1073 / API flavors |

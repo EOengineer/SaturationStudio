@@ -109,12 +109,13 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
         highHz = std::min (20000.0f, lowHz + 50.0f);
 
     engine.setCutoffs (lowHz, highHz);
+    // Apply family first so a newly created model receives Drive below
+    engine.setModelFamily (model != nullptr ? juce::roundToInt (model->load()) : 0);
     engine.setDrive (drive != nullptr ? drive->load() : 0.5f);
     engine.setMix (mix != nullptr ? mix->load() : 1.0f);
     engine.setOutputDb (bandOut != nullptr ? bandOut->load() : 0.0f);
-    engine.setModelFamily (model != nullptr ? (int) model->load() : 0);
-    engine.setDiodeFlavor (diode != nullptr ? (int) diode->load() : 0);
-    engine.setPreampFlavor (preamp != nullptr ? (int) preamp->load() : 0);
+    engine.setDiodeFlavor (diode != nullptr ? juce::roundToInt (diode->load()) : 0);
+    engine.setPreampFlavor (preamp != nullptr ? juce::roundToInt (preamp->load()) : 0);
 }
 
 void SaturationStudioAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)

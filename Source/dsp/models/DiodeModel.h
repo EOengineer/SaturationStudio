@@ -8,7 +8,7 @@
 /**
  * Diode family saturator: C¹ soft-clip + first-order ADAA inside the OS island.
  *
- * Drive pushes into the knee (0 dB → ~24 dB with gentle curve); makeup keeps
+ * Drive pushes into the knee (0 dB → ~34 dB with gentle curve); makeup keeps
  * −18 dBFS reference level roughly stable. Flavors are tuned characters.
  */
 class DiodeModel final : public SaturationModel

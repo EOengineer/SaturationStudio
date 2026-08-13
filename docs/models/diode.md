@@ -5,7 +5,7 @@ Product-grade **memoryless diode-family saturator** with first-order **ADAA**, r
 ## Signal path (inside OS island)
 
 ```text
-x → Drive gain (0…~24 dB, drive^1.4) → ADAA soft-clip → Makeup → y
+x → Drive gain (0…~34 dB, drive^1.3) → ADAA soft-clip → Makeup → y
 ```
 
 ## Transfer
@@ -31,8 +31,8 @@ y[n] = \frac{F(x[n]) - F(x[n-1])}{x[n] - x[n-1]}
 |---------|--------|
 | Plugin input ≈ **−18 dBFS** RMS | Modeling reference (`LevelReference::kReferenceRmsDb`) |
 | Drive **0** | Transparent |
-| Drive **~0.5** | Mostly clean, hint of grit at −18 |
-| Drive **1** | Clearly saturated; makeup holds loudness roughly stable |
+| Drive **~0.5** | Clear warmth / grit at −18 |
+| Drive **1** | Dense saturation; makeup holds loudness roughly stable |
 
 ## Flavors
 
