@@ -1,73 +1,63 @@
 #pragma once
 
+#include "../devices/AntiParallelClipper.h"
+#include "../devices/DiodeDevice.h"
+#include "../../util/ParamIDs.h"
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 
 /**
- * C¹-smooth diode-family soft clip (algebraic) + first-order ADAA helpers.
- * JUCE-free — usable from offline verifies and the plugin DiodeModel.
- *
- * Transfer (per polarity threshold a):
- *   f(x) = a * x / sqrt(a² + x²)
- *   F(x) = a * (sqrt(a² + x²) - a)   // antiderivative with F(0)=0
- *
- * Asymmetry: aPos for x≥0, aNeg for x<0 (both → f'(0)=1).
+ * Diode-family saturator helpers: flavor → clipper devices, Drive/makeup maps.
+ * Nonlinear transfer is the static antiparallel clipper (Shockley + Rs), not
+ * an algebraic soft-clip. Anti-aliasing relies on the engine 4× OS island
+ * (no analytic ADAA for the Newton transfer).
  */
 namespace diode
 {
-struct FlavorCoeffs
+struct FlavorSetup
 {
-    float aPos = 0.85f; // positive-side threshold (higher = cleaner)
-    float aNeg = 0.85f; // negative-side threshold
-    float makeupBiasDb = 0.0f; // static flavor loudness trim
+    devices::AntiParallelClipper clipper;
+    float makeupBiasDb = 0.0f;
 };
 
-inline FlavorCoeffs coeffsForFlavor (int flavor) noexcept
+inline FlavorSetup setupForFlavor (int flavor) noexcept
 {
-    // Tuned characters — not component datasheets. Lower a = earlier clip.
+    FlavorSetup s;
+    s.clipper.rs = 1000.0f;
+
     switch (flavor)
     {
-        case 1: // Germanium — earliest / softest
-            return { 0.34f, 0.34f, 0.5f };
-        case 2: // LED — more headroom than Si, then firmer grab
-            return { 0.78f, 0.78f, -0.35f };
-        case 3: // Asymmetric — even harmonics
-            return { 0.70f, 0.38f, 0.25f };
-        case 0: // Silicon
+        case DiodeFlavorIds::germanium:
+            s.clipper.dPos = devices::germanium();
+            s.clipper.dNeg = devices::germanium();
+            s.makeupBiasDb = 0.5f;
+            break;
+        case DiodeFlavorIds::led:
+            s.clipper.dPos = devices::ledRed();
+            s.clipper.dNeg = devices::ledRed();
+            s.makeupBiasDb = -0.35f;
+            break;
+        case DiodeFlavorIds::asymmetric:
+            // Neg side conducts earlier (Ge) → even harmonics
+            s.clipper.dPos = devices::siliconSignal();
+            s.clipper.dNeg = devices::germanium();
+            s.makeupBiasDb = 0.25f;
+            break;
+        case DiodeFlavorIds::silicon:
         default:
-            return { 0.55f, 0.55f, 0.0f };
+            s.clipper.dPos = devices::siliconSignal();
+            s.clipper.dNeg = devices::siliconSignal();
+            s.makeupBiasDb = 0.0f;
+            break;
     }
+
+    return s;
 }
 
-inline float thresholdFor (const FlavorCoeffs& c, float x) noexcept
+/** Clipper transfer (cold Newton). */
+inline float shape (float x, const devices::AntiParallelClipper& clip) noexcept
 {
-    return x >= 0.0f ? c.aPos : c.aNeg;
-}
-
-/** Waveshape f(x). */
-inline float shape (float x, const FlavorCoeffs& c) noexcept
-{
-    const float a = thresholdFor (c, x);
-    return a * x / std::sqrt (a * a + x * x);
-}
-
-/** Antiderivative F(x) with F(0)=0 (continuous across polarity change). */
-inline float antiderivative (float x, const FlavorCoeffs& c) noexcept
-{
-    const float a = thresholdFor (c, x);
-    return a * (std::sqrt (a * a + x * x) - a);
-}
-
-/**
- * First-order ADAA: y = (F(x) - F(xPrev)) / (x - xPrev), else f(x).
- */
-inline float adaa (float x, float xPrev, const FlavorCoeffs& c) noexcept
-{
-    const float dx = x - xPrev;
-    if (std::abs (dx) > 1.0e-5f)
-        return (antiderivative (x, c) - antiderivative (xPrev, c)) / dx;
-    return shape (x, c);
+    return clip.solve (x);
 }
 
 /** Drive → linear gain. Matches hotter Tape/Transformer family (~34 dB). */
@@ -83,40 +73,23 @@ inline float driveGainLinear (float drive01) noexcept
 
 /**
  * Makeup so −18 dBFS RMS sine stays roughly level-stable vs Drive.
- * Partial compensation (like Tube) so Drive still feels denser, not “gain-matched dead”.
+ * Partial compensation so Drive still feels denser, not gain-matched dead.
  */
-inline float makeupGainLinear (float drive01, const FlavorCoeffs& c) noexcept
+inline float makeupGainLinear (float drive01, const FlavorSetup& setup) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
     if (drive01 < 1.0e-6f)
-        return std::pow (10.0f, c.makeupBiasDb / 20.0f);
+        return std::pow (10.0f, setup.makeupBiasDb / 20.0f);
 
-    // −18 dBFS RMS sine peak
     constexpr float kRefPeak = 0.177827941f; // 10^(-18/20)*sqrt(2)
     const float g = driveGainLinear (drive01);
     const float driven = kRefPeak * g;
-    const float shaped = 0.5f * (std::abs (shape (driven, c)) + std::abs (shape (-driven, c)));
+    const float shaped = 0.5f * (std::abs (setup.clipper.solve (driven))
+                                 + std::abs (setup.clipper.solve (-driven)));
     const float ratio = shaped / std::max (kRefPeak, 1.0e-8f);
     const float comp = 1.0f / std::sqrt (std::max (ratio, 1.0e-3f));
     const float blend = 0.40f * std::pow (drive01, 0.85f);
     const float makeup = 1.0f + blend * (comp - 1.0f);
-    return makeup * std::pow (10.0f, c.makeupBiasDb / 20.0f);
-}
-
-/** One sample with driven-domain ADAA state (xPrevDriven = previous driven sample). */
-inline float processSampleDriven (float x, float drive01, const FlavorCoeffs& c, float& xPrevDriven) noexcept
-{
-    if (drive01 < 1.0e-6f)
-    {
-        xPrevDriven = x;
-        return x;
-    }
-
-    const float gIn = driveGainLinear (drive01);
-    const float gOut = makeupGainLinear (drive01, c);
-    const float xd = x * gIn;
-    const float y = adaa (xd, xPrevDriven, c);
-    xPrevDriven = xd;
-    return y * gOut;
+    return makeup * std::pow (10.0f, setup.makeupBiasDb / 20.0f);
 }
 } // namespace diode

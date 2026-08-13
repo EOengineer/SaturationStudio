@@ -1,29 +1,34 @@
 # Diode model
 
-Product-grade **memoryless diode-family saturator** with first-order **ADAA**, running inside SaturationStudio’s 4× oversampling island.
+**Shockley diode device** + static **antiparallel clipper** (`Rs` + diode pair), running inside SaturationStudio’s 4× oversampling island. Flavors select real device params (`Is`, `n Vt`), not ear-tuned algebraic knees.
+
+## Layers
+
+```text
+DiodeDevice          → Shockley I(V), G(V)          (reusable part)
+AntiParallelClipper  → Vin—Rs—V, diodes to gnd     (static resistive network)
+DiodeModel           → Drive → clipper → makeup    (saturator shell)
+```
+
+Audio samples are treated as volts into the clipper. Drive is product gain into that network (not a schematic pot).
 
 ## Signal path (inside OS island)
 
 ```text
-x → Drive gain (0…~34 dB, drive^1.3) → ADAA soft-clip → Makeup → y
+x → Drive gain (0…~34 dB, drive^1.3) → Newton clipper → Makeup → y
 ```
 
-## Transfer
+`Drive ≈ 0` hard-bypasses to identity. Anti-aliasing relies on **4× OS** (no ADAA — the Newton transfer has no simple analytic antiderivative).
 
-Algebraic soft-clip (C¹, f'(0)=1):
+## Clipper physics
 
-\[
-f(x) = a\,\frac{x}{\sqrt{a^2 + x^2}}
-\]
-
-Positive and negative polarities can use different thresholds \(a_{+}, a_{-}\) (asymmetric flavor). Antiderivative \(F(0)=0\) feeds first-order ADAA:
+KCL at the clip node \(V\):
 
 \[
-y[n] = \frac{F(x[n]) - F(x[n-1])}{x[n] - x[n-1]}
-\quad\text{(else } f(x[n]) \text{ when } \Delta x \approx 0\text{)}
+\frac{V_\mathrm{in}-V}{R_s} = I_\mathrm{pos}(V) - I_\mathrm{neg}(-V)
 \]
 
-`Drive ≈ 0` hard-bypasses to identity.
+with Shockley \(I = I_S(e^{V/(n V_T)}-1)\). Solved with 1-D Newton each sample. Network is **static** (fixed `Rs`, no capacitors); warm-start state is solver continuity only.
 
 ## Level / Drive contract
 
@@ -36,21 +41,21 @@ y[n] = \frac{F(x[n]) - F(x[n-1])}{x[n] - x[n-1]}
 
 ## Flavors
 
-| Flavor | Character |
-|--------|-----------|
-| Silicon | Tight, odd-heavy, modern knee |
-| Germanium | Earlier / softer threshold |
-| LED | More headroom, then firmer grab |
-| Asymmetric | Uneven knees → even harmonics |
-
-Coeffs live in `Source/dsp/models/DiodeCurve.h` — tuned by ear/spectrum, not pedal clones.
+| Flavor | Devices |
+|--------|---------|
+| Silicon | Si / Si antiparallel |
+| Germanium | Ge / Ge (earlier conduction) |
+| LED | LED / LED (later / firmer) |
+| Asymmetric | Si pos / Ge neg → even harmonics |
 
 ## Sources
 
 | File | Role |
 |------|------|
-| `DiodeCurve.h` | Shape, ADAA, Drive/makeup maps, flavor table |
-| `DiodeModel.h` | `SaturationModel` wrapper (per-channel ADAA state) |
+| `Source/dsp/devices/DiodeDevice.h` | Shockley part + Si/Ge/LED factories |
+| `Source/dsp/devices/AntiParallelClipper.h` | Series-R + antiparallel Newton clipper |
+| `Source/dsp/models/DiodeCurve.h` | Flavor → devices, Drive/makeup maps |
+| `Source/dsp/models/DiodeModel.h` | `SaturationModel` wrapper |
 
 ## Verifies
 
@@ -59,9 +64,10 @@ clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diod
 ./tools/diode_curve_verify
 ```
 
-Checks Drive=0 identity, mild Si harmonics at −18 / Drive 0.5, Asym even rise, Drive ramp, curve math.
+Checks device conductance vs FD, Vf ordering Ge&lt;Si&lt;LED, clipper small-signal identity, Drive=0 identity, Si harmonics at −18 / Drive 0.5, Asym even rise, Drive ramp.
 
 ## Later
 
-- Raise OS factor if ADAA+4× still aliases under abuse
-- Optional light pre/post linear color per flavor
+- Raise OS factor if 4× still aliases under abuse
+- Dynamic networks (C, feedback) that reuse `DiodeDevice`
+- Optional junction capacitance on the device

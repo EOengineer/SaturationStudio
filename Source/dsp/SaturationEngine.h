@@ -231,12 +231,23 @@ private:
     void resizeMatchDelays()
     {
         const int match = osLatency + postBpLatency;
-        matchDelaysSide.resize ((size_t) numChannels);
-        matchDelaysDryMid.resize ((size_t) numChannels);
+        const bool chansChanged = (int) matchDelaysSide.size() != numChannels
+                               || (int) matchDelaysDryMid.size() != numChannels;
+        if (chansChanged)
+        {
+            matchDelaysSide.resize ((size_t) numChannels);
+            matchDelaysDryMid.resize ((size_t) numChannels);
+        }
+
+        // setDelay() clears history — only call when length actually changes.
+        // syncEngineFromParams() hits setCutoffs every block; wiping here made
+        // dryMid/side silent (delay >> block size) so Mix only faded wet.
         for (auto& d : matchDelaysSide)
-            d.setDelay (match);
+            if (chansChanged || d.getDelay() != match)
+                d.setDelay (match);
         for (auto& d : matchDelaysDryMid)
-            d.setDelay (match);
+            if (chansChanged || d.getDelay() != match)
+                d.setDelay (match);
     }
 
     LinearPhaseBandSplitRT split;

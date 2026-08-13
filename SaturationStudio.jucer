@@ -28,6 +28,10 @@
         <FILE id="saH" name="SpectrumAnalyzer.h" compile="0" resource="0" file="Source/dsp/SpectrumAnalyzer.h"/>
         <FILE id="seH" name="SaturationEngine.h" compile="0" resource="0" file="Source/dsp/SaturationEngine.h"/>
         <FILE id="lrH" name="LevelReference.h" compile="0" resource="0" file="Source/dsp/LevelReference.h"/>
+        <GROUP id="SatSDev" name="devices">
+          <FILE id="ddH" name="DiodeDevice.h" compile="0" resource="0" file="Source/dsp/devices/DiodeDevice.h"/>
+          <FILE id="acH" name="AntiParallelClipper.h" compile="0" resource="0" file="Source/dsp/devices/AntiParallelClipper.h"/>
+        </GROUP>
         <GROUP id="SatSMod" name="models">
           <FILE id="smH" name="SaturationModel.h" compile="0" resource="0" file="Source/dsp/models/SaturationModel.h"/>
           <FILE id="mrH" name="ModelRegistry.h" compile="0" resource="0" file="Source/dsp/models/ModelRegistry.h"/>
