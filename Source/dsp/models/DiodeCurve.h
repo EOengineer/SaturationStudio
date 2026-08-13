@@ -8,7 +8,10 @@
 
 /**
  * Diode-family saturator helpers: flavor → feedback clipper, Drive/makeup.
- * Nonlinear transfer is ideal-OA inverting soft-clip (Shockley FB diodes + Cf).
+ *
+ * Drive is a component change: Rin = Rf / G(drive) so closed-loop gain
+ * Rf/Rin rises with Drive. G follows the same dB curve as the old pre-gain
+ * map (~34 dB max, drive^1.3) so mid-knob stays usable at −18.
  * Anti-aliasing relies on the engine 4× OS island (no analytic ADAA).
  */
 namespace diode
@@ -19,12 +22,17 @@ struct FlavorSetup
     float makeupBiasDb = 0.0f;
 };
 
+inline constexpr float kRfOhms = 10000.0f;
+inline constexpr float kCfFarads = 100.0e-12f;
+inline constexpr float kMaxDriveDb = 34.0f;
+inline constexpr float kDriveCurve = 1.3f;
+
 inline FlavorSetup setupForFlavor (int flavor) noexcept
 {
     FlavorSetup s;
-    s.clipper.rin = 10000.0f;
-    s.clipper.rf  = 10000.0f;
-    s.clipper.cf  = 100.0e-12f;
+    s.clipper.rf = kRfOhms;
+    s.clipper.cf = kCfFarads;
+    s.clipper.rin = kRfOhms; // unity until Drive applied
 
     switch (flavor)
     {
@@ -54,33 +62,47 @@ inline FlavorSetup setupForFlavor (int flavor) noexcept
     return s;
 }
 
+/** Closed-loop |gain| Rf/Rin from Drive (1 → ~50 ≈ 34 dB). */
+inline float closedLoopGain (float drive01) noexcept
+{
+    drive01 = std::clamp (drive01, 0.0f, 1.0f);
+    const float t = std::pow (drive01, kDriveCurve);
+    const float db = kMaxDriveDb * t;
+    return std::pow (10.0f, db / 20.0f);
+}
+
+/** Rin for Drive — smaller Rin → more gain into the diodes. */
+inline float rinForDrive (float drive01, float rf = kRfOhms) noexcept
+{
+    return rf / std::max (closedLoopGain (drive01), 1.0e-3f);
+}
+
+inline void applyDriveToClipper (devices::FeedbackDiodeClipper& clip, float drive01) noexcept
+{
+    clip.rin = rinForDrive (drive01, clip.rf);
+}
+
 /** DC clipper transfer (Cf open), audio polarity. */
 inline float shape (float x, const devices::FeedbackDiodeClipper& clip) noexcept
 {
     return clip.solveDc (x);
 }
 
-inline float driveGainLinear (float drive01) noexcept
-{
-    drive01 = std::clamp (drive01, 0.0f, 1.0f);
-    constexpr float kMaxDb = 34.0f;
-    constexpr float kCurve = 1.3f;
-    const float t = std::pow (drive01, kCurve);
-    const float db = kMaxDb * t;
-    return std::pow (10.0f, db / 20.0f);
-}
-
-inline float makeupGainLinear (float drive01, const FlavorSetup& setup) noexcept
+/**
+ * Makeup so −18 dBFS RMS sine stays roughly level-stable vs Drive.
+ * Uses DC solve with Rin set for this Drive (no external pre-gain).
+ */
+inline float makeupGainLinear (float drive01, FlavorSetup setup) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
     if (drive01 < 1.0e-6f)
         return std::pow (10.0f, setup.makeupBiasDb / 20.0f);
 
+    applyDriveToClipper (setup.clipper, drive01);
+
     constexpr float kRefPeak = 0.177827941f;
-    const float g = driveGainLinear (drive01);
-    const float driven = kRefPeak * g;
-    const float shaped = 0.5f * (std::abs (setup.clipper.solveDc (driven))
-                                 + std::abs (setup.clipper.solveDc (-driven)));
+    const float shaped = 0.5f * (std::abs (setup.clipper.solveDc (kRefPeak))
+                                 + std::abs (setup.clipper.solveDc (-kRefPeak)));
     const float ratio = shaped / std::max (kRefPeak, 1.0e-8f);
     const float comp = 1.0f / std::sqrt (std::max (ratio, 1.0e-3f));
     const float blend = 0.40f * std::pow (drive01, 0.85f);

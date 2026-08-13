@@ -8,8 +8,9 @@
 /**
  * Diode family saturator: ideal-OA feedback diode clipper inside the OS island.
  *
- * Drive pushes into the knee; makeup keeps −18 dBFS roughly level-stable.
- * Flavors select Shockley device params. Anti-aliasing: 4× OS (no ADAA).
+ * Drive changes Rin (Rf/Rin gain into the diodes) — a component mod, not a
+ * separate pre-gain. Makeup keeps −18 dBFS roughly level-stable. Flavors
+ * select Shockley device params. Anti-aliasing: 4× OS (no ADAA).
  */
 class DiodeModel final : public SaturationModel
 {
@@ -24,7 +25,7 @@ public:
         osSampleRate = sampleRate > 0.0 ? sampleRate : 192000.0;
         setup = diode::setupForFlavor (diodeFlavor);
         setup.clipper.prepare (osSampleRate);
-        updateGains();
+        updateDriveComponents();
     }
 
     void reset() override
@@ -36,7 +37,7 @@ public:
     void setDrive (float drive01) override
     {
         drive = drive01;
-        updateGains();
+        updateDriveComponents();
     }
 
     void setDiodeFlavor (int flavor) override
@@ -44,7 +45,7 @@ public:
         diodeFlavor = flavor;
         setup = diode::setupForFlavor (flavor);
         setup.clipper.prepare (osSampleRate);
-        updateGains();
+        updateDriveComponents();
         reset();
     }
 
@@ -66,7 +67,6 @@ public:
                 if (channels[ch] == nullptr)
                     continue;
                 auto& st = fbState[(size_t) ch];
-                // Audio y = −Vout; store OA output for Cf continuity
                 st.vOut = -channels[ch][numSamples - 1];
                 st.iCap = 0.0f;
             }
@@ -82,23 +82,21 @@ public:
             auto& st = fbState[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
             {
-                const float xd = data[i] * driveGain;
-                const float y = setup.clipper.process (xd, st);
-                data[i] = y * makeupGain;
+                // No pre-gain — Drive already set Rin on the clipper
+                data[i] = setup.clipper.process (data[i], st) * makeupGain;
             }
         }
     }
 
 private:
-    void updateGains() noexcept
+    void updateDriveComponents() noexcept
     {
-        driveGain = diode::driveGainLinear (drive);
+        diode::applyDriveToClipper (setup.clipper, drive);
         makeupGain = diode::makeupGainLinear (drive, setup);
     }
 
     int diodeFlavor = DiodeFlavorIds::silicon;
     float drive = 0.5f;
-    float driveGain = 1.0f;
     float makeupGain = 1.0f;
     double osSampleRate = 192000.0;
     diode::FlavorSetup setup {};

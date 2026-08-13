@@ -209,7 +209,7 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // --- High Drive: stronger relative 3rd than Drive 0.5, finite ---
+    // --- High Drive: stronger relative 3rd than mild Drive (component Rin) ---
     {
         auto thirdRatioAt = [&] (float drive) -> double
         {
@@ -344,6 +344,21 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.pass (oss.str());
         else
             r.fail (oss.str() + (finite ? "" : " (NaN)"));
+    }
+
+    // --- Component Drive: Rin falls / Rf/Rin rises with Drive ---
+    {
+        const float rinLo = diode::rinForDrive (0.2f);
+        const float rinHi = diode::rinForDrive (1.0f);
+        const float gLo = diode::closedLoopGain (0.2f);
+        const float gHi = diode::closedLoopGain (1.0f);
+        std::ostringstream oss;
+        oss << "Rin(0.2)=" << rinLo << " Rin(1)=" << rinHi << " G=" << gLo << "→" << gHi;
+        // dB map: Drive 0.2 ≈ few dB, Drive 1 ≈ 34 dB (~50×)
+        if (rinHi < rinLo && gHi > gLo && gHi > 40.0f && gLo < 5.0f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
     }
 
     // --- High Drive + hot input: audible & finite (regresses Newton plateau silence) ---
