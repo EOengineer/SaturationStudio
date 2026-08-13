@@ -6,11 +6,10 @@
 #include <vector>
 
 /**
- * Diode family saturator: Shockley antiparallel + shunt-C clipper in the OS island.
+ * Diode family saturator: ideal-OA feedback diode clipper inside the OS island.
  *
- * Drive pushes into the knee (0 dB → ~34 dB with gentle curve); makeup keeps
- * −18 dBFS reference level roughly stable. Flavors select device params.
- * Relies on 4× OS for anti-aliasing (no ADAA on the Newton transfer).
+ * Drive pushes into the knee; makeup keeps −18 dBFS roughly level-stable.
+ * Flavors select Shockley device params. Anti-aliasing: 4× OS (no ADAA).
  */
 class DiodeModel final : public SaturationModel
 {
@@ -21,7 +20,7 @@ public:
     void prepare (double sampleRate, int /*maxBlock*/, int numChannels) override
     {
         const int ch = numChannels > 0 ? numChannels : 1;
-        capState.assign ((size_t) ch, {});
+        fbState.assign ((size_t) ch, {});
         osSampleRate = sampleRate > 0.0 ? sampleRate : 192000.0;
         setup = diode::setupForFlavor (diodeFlavor);
         setup.clipper.prepare (osSampleRate);
@@ -30,7 +29,7 @@ public:
 
     void reset() override
     {
-        for (auto& s : capState)
+        for (auto& s : fbState)
             s = {};
     }
 
@@ -57,8 +56,8 @@ public:
         if (channels == nullptr || numChannels <= 0 || numSamples <= 0)
             return;
 
-        if ((int) capState.size() < numChannels)
-            capState.resize ((size_t) numChannels, {});
+        if ((int) fbState.size() < numChannels)
+            fbState.resize ((size_t) numChannels, {});
 
         if (drive < 1.0e-6f)
         {
@@ -66,9 +65,9 @@ public:
             {
                 if (channels[ch] == nullptr)
                     continue;
-                // Keep C state coherent with bypassed audio
-                auto& st = capState[(size_t) ch];
-                st.v = channels[ch][numSamples - 1];
+                auto& st = fbState[(size_t) ch];
+                // Audio y = −Vout; store OA output for Cf continuity
+                st.vOut = -channels[ch][numSamples - 1];
                 st.iCap = 0.0f;
             }
             return;
@@ -80,7 +79,7 @@ public:
             if (data == nullptr)
                 continue;
 
-            auto& st = capState[(size_t) ch];
+            auto& st = fbState[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
             {
                 const float xd = data[i] * driveGain;
@@ -103,5 +102,5 @@ private:
     float makeupGain = 1.0f;
     double osSampleRate = 192000.0;
     diode::FlavorSetup setup {};
-    std::vector<devices::AntiParallelRcClipper::State> capState;
+    std::vector<devices::FeedbackDiodeClipper::State> fbState;
 };

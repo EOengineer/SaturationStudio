@@ -1,14 +1,15 @@
 # Diode model
 
-**Shockley diode device** + **dynamic antiparallel clipper** (`Rs` + diode pair + shunt `C`), running inside SaturationStudio’s 4× oversampling island. Flavors select real device params (`Is`, `n Vt`), not ear-tuned algebraic knees.
+**Shockley diode device** + **ideal-op-amp feedback clipper** (`Rin`, `Rf`, antiparallel FB diodes, `Cf`), running inside SaturationStudio’s 4× oversampling island. Flavors select real device params (`Is`, `n Vt`).
 
 ## Layers
 
 ```text
-DiodeDevice              → Shockley I(V), G(V)              (reusable part)
-AntiParallelClipper      → Vin—Rs—V, diodes to gnd          (static net, still available)
-AntiParallelRcClipper    → same + shunt C (trapezoidal)     (Diode family saturator)
-DiodeModel               → Drive → RC clipper → makeup      (saturator shell)
+DiodeDevice              → Shockley I(V), G(V)                 (reusable part)
+AntiParallelClipper      → Vin—Rs—V, diodes to gnd             (static net)
+AntiParallelRcClipper    → same + shunt C                      (dynamic shunt net)
+FeedbackDiodeClipper     → ideal OA + Rin/Rf + FB diodes + Cf  (Diode family saturator)
+DiodeModel               → Drive → feedback clipper → makeup
 ```
 
 Audio samples are treated as volts into the clipper. Drive is product gain into that network (not a schematic pot).
@@ -16,30 +17,30 @@ Audio samples are treated as volts into the clipper. Drive is product gain into 
 ## Signal path (inside OS island)
 
 ```text
-x → Drive gain (0…~34 dB, drive^1.3) → Newton RC clipper → Makeup → y
+x → Drive gain (0…~34 dB, drive^1.3) → Newton feedback clipper → Makeup → y
 ```
 
-`Drive ≈ 0` hard-bypasses to identity. Anti-aliasing relies on **4× OS** (no ADAA — the Newton transfer has no simple analytic antiderivative). Raise OS later if abuse still aliases.
+`Drive ≈ 0` hard-bypasses to identity. Anti-aliasing relies on **4× OS** (no ADAA). Raise OS later if abuse still aliases.
 
-## Clipper physics
+## Feedback clipper physics
 
-KCL at the clip node \(V\):
+Ideal OA with `(+)` grounded → virtual ground at `(−)`. KCL at the inverting node:
 
 \[
-\frac{V_\mathrm{in}-V}{R_s} = I_\mathrm{pos}(V) - I_\mathrm{neg}(-V) + I_C
+\frac{V_\mathrm{in}}{R_\mathrm{in}} + \frac{V_\mathrm{out}}{R_f} + I_d(V_\mathrm{out}) + I_{C_f} = 0
 \]
 
-with Shockley \(I = I_S(e^{V/(n V_T)}-1)\). Capacitance uses a **trapezoidal companion** at the oversampled rate (\(G_\mathrm{eq}=2C/T\)). Solved with 1-D Newton each sample; per-channel state holds \(V\) and \(I_C\).
+with Shockley \(I_d(V)=I_\mathrm{pos}(V)-I_\mathrm{neg}(-V)\). `Cf` uses a trapezoidal companion. Audio out is \(-V_\mathrm{out}\) so small-signal polarity matches the older shunt clippers (\(|G|\approx R_f/R_\mathrm{in}\)).
 
-Default parts: \(R_s = 1\,\mathrm{k}\Omega\), \(C = 4.7\,\mathrm{nF}\) (edge softening without killing grit at −18 / Drive ~0.5).
+`Rf` parallels the diodes so DC feedback exists when diodes are off (required under an ideal OA).
 
-Static [`AntiParallelClipper`](../../Source/dsp/devices/AntiParallelClipper.h) remains for composition / compares (C open ≡ DC solve of the RC net).
+Default parts: \(R_\mathrm{in}=R_f=10\,\mathrm{k}\Omega\) (unity), \(C_f=100\,\mathrm{pF}\).
 
 ## Level / Drive contract
 
 | Setting | Intent |
 |---------|--------|
-| Plugin input ≈ **−18 dBFS** RMS | Modeling reference (`LevelReference::kReferenceRmsDb`) |
+| Plugin input ≈ **−18 dBFS** RMS | Modeling reference |
 | Drive **0** | Transparent |
 | Drive **~0.5** | Clear warmth / grit at −18 |
 | Drive **1** | Dense saturation; makeup holds loudness roughly stable |
@@ -48,20 +49,21 @@ Static [`AntiParallelClipper`](../../Source/dsp/devices/AntiParallelClipper.h) r
 
 | Flavor | Devices |
 |--------|---------|
-| Silicon | Si / Si antiparallel |
-| Germanium | Ge / Ge (earlier conduction) |
-| LED | LED / LED (later / firmer) |
+| Silicon | Si / Si in feedback |
+| Germanium | Ge / Ge |
+| LED | LED / LED |
 | Asymmetric | Si pos / Ge neg → even harmonics |
 
 ## Sources
 
 | File | Role |
 |------|------|
-| `Source/dsp/devices/DiodeDevice.h` | Shockley part + Si/Ge/LED factories |
-| `Source/dsp/devices/AntiParallelClipper.h` | Static series-R + antiparallel |
-| `Source/dsp/devices/AntiParallelRcClipper.h` | Dynamic clipper (shunt C) |
-| `Source/dsp/models/DiodeCurve.h` | Flavor → devices, Drive/makeup maps |
-| `Source/dsp/models/DiodeModel.h` | `SaturationModel` wrapper + C state |
+| `Source/dsp/devices/DiodeDevice.h` | Shockley part |
+| `Source/dsp/devices/AntiParallelClipper.h` | Static shunt clipper |
+| `Source/dsp/devices/AntiParallelRcClipper.h` | Shunt-C clipper |
+| `Source/dsp/devices/FeedbackDiodeClipper.h` | Ideal-OA feedback clipper |
+| `Source/dsp/models/DiodeCurve.h` | Flavor → devices, Drive/makeup |
+| `Source/dsp/models/DiodeModel.h` | `SaturationModel` + Cf state |
 
 ## Verifies
 
@@ -70,10 +72,8 @@ clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diod
 ./tools/diode_curve_verify
 ```
 
-Checks device physics, DC clipper, RC vs static edge energy, Drive=0 identity, harmonics, high-Drive finite.
-
 ## Later
 
-- Raise OS / LUT-ADAA if 4× still aliases under abuse
-- Richer dynamic networks (feedback) reusing `DiodeDevice`
-- Optional junction capacitance / temperature on the device
+- Raise OS / LUT-ADAA if needed
+- Richer islands (real drive pot, tone) toward pedal-style stages
+- Tube-as-device; optional junction C / temperature on diodes
