@@ -4,7 +4,7 @@ SaturationStudio uses **topology families**, not named guitar pedals.
 
 | Family | Teaches toward tube amps | v1 |
 |--------|--------------------------|----|
-| **Diode** | Device I–V, clipper networks, Newton | Shockley `DiodeDevice` + static antiparallel clipper |
+| **Diode** | Device I–V, clipper networks, Newton, reactive C | Shockley `DiodeDevice` + antiparallel + shunt-C clipper |
 | **Tube** | Smooth transfer, even harmonics, eventual triode stages | Asymmetric tanh ADAA soft-clip |
 | **Tape** | Soft clip + HF loss / compression character | Soft symmetric algebraic ADAA |
 | **Transformer** | Hysteresis / memory nonlinearities | Asymmetric algebraic ADAA (no hysteresis yet) |
@@ -14,8 +14,9 @@ Clippers stay separable so each nonlinearity stays inspectable and reusable when
 
 ## Skill map
 
-1. Diode device + static Newton clipper → confidence composing diode networks  
-2. Tube transfer → triode / power stage intuition  
-3. Transformer hysteresis → OT / iron behavior  
-4. Preamp flavors → channel-strip character without boiling the ocean  
-5. Later: dynamic networks (C, feedback) reusing the same devices
+1. Diode device + static Newton clipper — done  
+2. Dynamic diode network (shunt C, trap companion) — current  
+3. Tube transfer → triode / power stage intuition  
+4. Transformer hysteresis → OT / iron behavior  
+5. Preamp flavors → channel-strip character without boiling the ocean  
+6. Later: richer nets (feedback) and Tube-as-device, reusing the same patterns

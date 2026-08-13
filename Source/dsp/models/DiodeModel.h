@@ -6,7 +6,7 @@
 #include <vector>
 
 /**
- * Diode family saturator: Shockley antiparallel clipper inside the OS island.
+ * Diode family saturator: Shockley antiparallel + shunt-C clipper in the OS island.
  *
  * Drive pushes into the knee (0 dB → ~34 dB with gentle curve); makeup keeps
  * −18 dBFS reference level roughly stable. Flavors select device params.
@@ -18,17 +18,20 @@ public:
     const char* getId() const override { return ModelIds::diode; }
     const char* getDisplayName() const override { return "Diode"; }
 
-    void prepare (double /*sampleRate*/, int /*maxBlock*/, int numChannels) override
+    void prepare (double sampleRate, int /*maxBlock*/, int numChannels) override
     {
         const int ch = numChannels > 0 ? numChannels : 1;
-        prevNode.assign ((size_t) ch, 0.0f);
+        capState.assign ((size_t) ch, {});
+        osSampleRate = sampleRate > 0.0 ? sampleRate : 192000.0;
         setup = diode::setupForFlavor (diodeFlavor);
+        setup.clipper.prepare (osSampleRate);
         updateGains();
     }
 
     void reset() override
     {
-        std::fill (prevNode.begin(), prevNode.end(), 0.0f);
+        for (auto& s : capState)
+            s = {};
     }
 
     void setDrive (float drive01) override
@@ -41,7 +44,9 @@ public:
     {
         diodeFlavor = flavor;
         setup = diode::setupForFlavor (flavor);
+        setup.clipper.prepare (osSampleRate);
         updateGains();
+        reset();
     }
 
     int getDiodeFlavor() const noexcept { return diodeFlavor; }
@@ -52,8 +57,8 @@ public:
         if (channels == nullptr || numChannels <= 0 || numSamples <= 0)
             return;
 
-        if ((int) prevNode.size() < numChannels)
-            prevNode.resize ((size_t) numChannels, 0.0f);
+        if ((int) capState.size() < numChannels)
+            capState.resize ((size_t) numChannels, {});
 
         if (drive < 1.0e-6f)
         {
@@ -61,7 +66,10 @@ public:
             {
                 if (channels[ch] == nullptr)
                     continue;
-                prevNode[(size_t) ch] = channels[ch][numSamples - 1];
+                // Keep C state coherent with bypassed audio
+                auto& st = capState[(size_t) ch];
+                st.v = channels[ch][numSamples - 1];
+                st.iCap = 0.0f;
             }
             return;
         }
@@ -72,14 +80,13 @@ public:
             if (data == nullptr)
                 continue;
 
-            float prev = prevNode[(size_t) ch];
+            auto& st = capState[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
             {
                 const float xd = data[i] * driveGain;
-                const float y = setup.clipper.process (xd, prev);
+                const float y = setup.clipper.process (xd, st);
                 data[i] = y * makeupGain;
             }
-            prevNode[(size_t) ch] = prev;
         }
     }
 
@@ -94,6 +101,7 @@ private:
     float drive = 0.5f;
     float driveGain = 1.0f;
     float makeupGain = 1.0f;
+    double osSampleRate = 192000.0;
     diode::FlavorSetup setup {};
-    std::vector<float> prevNode;
+    std::vector<devices::AntiParallelRcClipper::State> capState;
 };

@@ -47,7 +47,7 @@ Cutoff invariant: `lowCutHz < highCutHz` (clamped in engine / processor).
 `SaturationModel` is a small interface (`prepare` / `reset` / `process` at oversampled rate).  
 `ModelRegistry` lists families + flavors for the UI and constructs instances.
 
-Default: **Diode / Silicon** — Shockley antiparallel clipper (see `docs/models/diode.md`). Tube / Tape / Transformer / Preamp remain ADAA waveshapers (`docs/models/*.md`).
+Default: **Diode / Silicon** — Shockley antiparallel + shunt-C clipper (see `docs/models/diode.md`). Tube / Tape / Transformer / Preamp remain ADAA waveshapers (`docs/models/*.md`).
 
 ## Key source map
 
