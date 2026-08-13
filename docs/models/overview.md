@@ -16,8 +16,9 @@ Clippers stay separable so each nonlinearity stays inspectable and reusable when
 
 1. Diode device + static Newton clipper — done  
 2. Dynamic diode network (shunt C) — done  
-3. Feedback diode clipper (ideal OA + FB diodes + Cf) — current  
-4. Tube transfer → triode / power stage intuition  
-5. Transformer hysteresis → OT / iron behavior  
-6. Preamp flavors → channel-strip character without boiling the ocean  
-7. Later: richer pedal islands / Tube-as-device
+3. Feedback diode clipper (ideal OA + FB diodes + Cf) — done  
+4. Component-backed Drive (Rin from Drive) — current  
+5. Tube transfer → triode / power stage intuition  
+6. Transformer hysteresis → OT / iron behavior  
+7. Preamp flavors → channel-strip character without boiling the ocean  
+8. Later: richer pedal islands / Tube-as-device

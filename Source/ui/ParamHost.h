@@ -27,7 +27,7 @@ public:
         flavorBox.setEnabled (true);
         flavorBox.setVisible (true);
         flavorLabel.setVisible (true);
-        hintLabel.setText ("Diode saturator — feedback OA clipper + 4× OS", juce::dontSendNotification);
+        hintLabel.setText ("Diode saturator — Drive sets Rin + 4× OS", juce::dontSendNotification);
     }
 
     void showPreampFlavors()
