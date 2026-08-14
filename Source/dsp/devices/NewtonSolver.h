@@ -15,6 +15,7 @@ template <int N>
 struct NewtonSolver
 {
     int maxIterations = 12;
+    int maxLineSearch = 6;
     float absTol = 1.0e-9f;
 
     struct Result
@@ -52,7 +53,7 @@ struct NewtonSolver
             std::array<float, N> xTrial = x;
             float bestNorm = result.residualNorm;
 
-            for (int line = 0; line < 6; ++line)
+            for (int line = 0; line < maxLineSearch; ++line)
             {
                 for (int i = 0; i < N; ++i)
                     xTrial[(size_t) i] = x[(size_t) i] - alpha * dx[(size_t) i];
