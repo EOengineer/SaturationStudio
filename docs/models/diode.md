@@ -32,6 +32,31 @@ with Shockley \(I_d(V)=I_\mathrm{pos}(V)-I_\mathrm{neg}(-V)\) including each dio
 
 Default: \(R_f=10\,\mathrm{k}\Omega\), \(C_f=100\,\mathrm{pF}\); \(R_\mathrm{in}\) set by Drive.
 
+## Circuit C vs junction C
+
+Two different capacitors. Do not treat “add C to the diode” as the next topology step — the live path is already a circuit.
+
+**Circuit C (shipped).** A discrete part in the net, roughly constant. Feedback `Cf` (100 pF) and shunt-clipper `C` (4.7 nF) use trapezoidal companions. That is already \(I = f(V) + C\,dV/dt\), but \(f(V)\) is the diode and \(C\) is **not** the diode. Impulse verifies exist because of this **network** memory.
+
+**Junction / diffusion C (not on the part).** Charge stored in the semiconductor (`DiodeDevice`), like `Is` / `nVt` / bulk `rs`:
+
+- Junction (depletion) C — reverse / small forward; \(C_j(V) \propto (1-V/\phi)^{-m}\).
+- Diffusion C — strong forward; stored charge \(\propto\) forward current. Reverse recovery is pulling that charge out before the diode can block.
+
+Shockley + bulk \(R_s\) is still memoryless (same \(V\) now \(\Rightarrow\) same \(I\) now). Junction C would make the **part** history-dependent. SPICE-ish \(C_{j0}\) (~2–8 pF Si) is small next to 100 pF `Cf`; diffusion C / Ge would show more. Same story as bulk \(R_s\): authentic on the reusable part, modest change to the current saturator because the net already has C.
+
+Where the stack sits:
+
+| Level | Meaning | This repo |
+|-------|---------|-----------|
+| 0 | Algebraic waveshaper \(x\to y\) | Replaced |
+| 1 | Shockley \(V\to I\) | `DiodeDevice` junction |
+| 2 | Junction + bulk \(R_s\) | Shipped |
+| 3 | Nonlinear C **on the diode** | Later (not next) |
+| 4 | Diode inside a circuit | Live path (OA + Rin/Rf + FB diodes + Cf) |
+
+Status: **static diode + dynamic circuit**. Remaining diode physics (junction C, temperature) belongs on the part, not as a new clipper topology.
+
 ## Level / Drive contract
 
 | Setting | Intent |
@@ -70,4 +95,4 @@ clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diod
 
 - Raise OS / LUT-ADAA if needed
 - Richer islands (tone) toward pedal-style stages
-- Tube-as-device; optional junction C / temperature on diodes
+- Tube-as-device; junction/diffusion C and temperature on `DiodeDevice` (companion stamp + per-diode state — not a one-line C)
