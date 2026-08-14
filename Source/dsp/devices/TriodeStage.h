@@ -233,7 +233,8 @@ public:
 private:
     static constexpr float kPlateToAudio = 1.0f / 300.0f;
     static constexpr float kMaxGridGain = 86.4f; // +20% vs prior 72
-    static constexpr float kDriveCurve = 2.55f;
+    static constexpr float kDriveCurve = 1.6f;   // usable mid-low Drive (was 2.55 — felt gated)
+
     /** Soft-limit |Vdrive| so Drive 1 does not thrash 3×3 Newton (RT). */
     static constexpr float kVdriveLimit = 18.0f;
 

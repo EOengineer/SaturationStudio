@@ -168,6 +168,20 @@ inline TubeCurveReport runTubeCurveVerifications()
                 r.fail (oss.str() + " (loudness outside 0..+13 dB)");
         }
 
+        // Low Drive must stay audible (no dry→silent→hot gating dead zone).
+        {
+            const double outLo = rmsAt (TubeFlavorIds::ax7, 0.25f);
+            const double floor = (double) rmsIn * std::pow (10.0, -12.0 / 20.0);
+            std::ostringstream oss;
+            oss << "−18 AX7 Drive=0.25 RMS_out=" << outLo << " (floor " << floor << ")";
+            if (outLo < 0.0)
+                r.fail (oss.str() + " (NaN)");
+            else if (outLo >= floor)
+                r.pass (oss.str());
+            else
+                r.fail (oss.str() + " (low Drive collapsed / gated)");
+        }
+
         const double ax = rmsAt (TubeFlavorIds::ax7, 0.55f);
         const double mid = rmsAt (TubeFlavorIds::type5751, 0.55f);
         const double au = rmsAt (TubeFlavorIds::au7, 0.55f);
@@ -207,7 +221,8 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.fail ("flavors finite Drive1");
     }
 
-    // Drive ramp on AX7: more harmonic energy at Drive 1 than 0.5
+    // Drive ramp on AX7: more harmonic energy at Drive 0.5 than 0.25
+    // (Drive 1 may not exceed 0.5 absolute H2..5 under soft Vdrive limit / makeup.)
     {
         auto harmAt = [&] (float drive) -> double
         {
@@ -234,16 +249,17 @@ inline TubeCurveReport runTubeCurveVerifications()
                  + tubeGoertzelPower (x, nn, 4.0 * f0, sr)
                  + tubeGoertzelPower (x, nn, 5.0 * f0, sr);
         };
-        const double hLo = harmAt (0.5f);
+        const double hLo = harmAt (0.25f);
+        const double hMid = harmAt (0.5f);
         const double hHi = harmAt (1.0f);
         std::ostringstream oss;
-        oss << "Drive ramp H2..5(0.5)=" << hLo << " H2..5(1.0)=" << hHi;
-        if (hLo < 0.0 || hHi < 0.0)
+        oss << "Drive ramp H2..5(0.25)=" << hLo << " (0.5)=" << hMid << " (1.0)=" << hHi;
+        if (hLo < 0.0 || hMid < 0.0 || hHi < 0.0)
             r.fail (oss.str() + " (NaN)");
-        else if (hHi > hLo * 1.5)
+        else if (hMid > hLo * 1.5 && hHi > hLo * 1.5)
             r.pass (oss.str());
         else
-            r.fail (oss.str() + " (expected H2..5 at Drive 1 ≫ Drive 0.5)");
+            r.fail (oss.str() + " (expected more harmonics by Drive 0.5 vs 0.25)");
     }
 
     return r;

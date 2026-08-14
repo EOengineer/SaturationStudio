@@ -3,6 +3,7 @@
 #include "DiodeCurve.h"
 #include "SaturationModel.h"
 #include "../../util/ParamIDs.h"
+#include <algorithm>
 #include <vector>
 
 /**
@@ -60,7 +61,10 @@ public:
         if ((int) fbState.size() < numChannels)
             fbState.resize ((size_t) numChannels, {});
 
-        if (drive < 1.0e-6f)
+        // Short dry/wet so Drive≈0 stays identity without an abrupt bypass edge.
+        constexpr float kBlendDrive = 0.08f;
+        const float w = std::clamp (drive / kBlendDrive, 0.0f, 1.0f);
+        if (w <= 0.0f)
         {
             for (int ch = 0; ch < numChannels; ++ch)
             {
@@ -73,6 +77,7 @@ public:
             return;
         }
 
+        const float dryW = 1.0f - w;
         for (int ch = 0; ch < numChannels; ++ch)
         {
             float* data = channels[ch];
@@ -82,8 +87,10 @@ public:
             auto& st = fbState[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
             {
+                const float x = data[i];
                 // No pre-gain — Drive already set Rin on the clipper
-                data[i] = setup.clipper.process (data[i], st) * makeupGain;
+                const float wet = setup.clipper.process (x, st) * makeupGain;
+                data[i] = dryW * x + w * wet;
             }
         }
     }
