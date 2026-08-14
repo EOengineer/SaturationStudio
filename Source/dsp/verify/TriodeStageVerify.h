@@ -215,6 +215,68 @@ inline TriodeStageReport runTriodeStageVerifications()
             r.fail (oss.str() + " (expected measurable harmonics)");
     }
 
+    // Coupling HPF: after a DC-ish step into the stage settles, AC out → ~0
+    {
+        devices::TriodeStage stage;
+        stage.prepare ((float) sr, devices::twelveAx7());
+        stage.setDrive (0.5f);
+        stage.reset();
+
+        // Warm with AC, then hold a constant input; coupling should settle near 0.
+        const float hold = 0.2f;
+        for (int i = 0; i < 2048; ++i)
+            (void) stage.processSample (hold * std::sin (2.0f * kPi * 100.0f * (float) i / (float) sr));
+        for (int i = 0; i < 8192; ++i)
+            (void) stage.processSample (hold);
+
+        double sum = 0.0;
+        const int settle = 4096;
+        for (int i = 0; i < settle; ++i)
+        {
+            const float y = stage.processSample (hold);
+            sum += (double) y * (double) y;
+        }
+        const double rms = std::sqrt (sum / (double) settle);
+        std::ostringstream oss;
+        oss << "coupling DC hold RMS=" << rms;
+        if (std::isfinite (rms) && rms < 5.0e-3)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str() + " (expected HPF to block DC)");
+    }
+
+    // Miller: high-freq energy ≤ mid-freq (mild HF roll-off into grid)
+    {
+        auto energyAt = [&] (float fHz) -> double
+        {
+            devices::TriodeStage stage;
+            stage.prepare ((float) sr, devices::twelveAx7());
+            stage.setDrive (0.5f);
+            stage.reset();
+
+            const float peak = 0.05f; // small-signal — stay linear-ish
+            double sum = 0.0;
+            const int skip = 2048;
+            for (int i = 0; i < n; ++i)
+            {
+                const float vin = peak * std::sin (2.0f * kPi * fHz * (float) i / (float) sr);
+                const float y = stage.processSample (vin);
+                if (i >= skip)
+                    sum += (double) y * (double) y;
+            }
+            return sum;
+        };
+
+        const double eMid = energyAt (1000.0f);
+        const double eHi = energyAt (15000.0f);
+        std::ostringstream oss;
+        oss << "Miller energy 1k=" << eMid << " 15k=" << eHi;
+        if (eMid > 1.0e-8 && eHi >= 0.0 && eHi <= eMid * 1.05)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str() + " (expected HF ≤ mid)");
+    }
+
     return r;
 }
 } // namespace verify
