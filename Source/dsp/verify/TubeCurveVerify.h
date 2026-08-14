@@ -122,7 +122,7 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.fail (oss.str() + " (expected Tube even-lean vs Si)");
     }
 
-    // Flavor ordering: AX7 louder/denser than AU7 at Drive 0.55
+    // −18 loudness contract + flavor ordering (stage makeup / plate scale — not TubeDevice)
     {
         auto rmsAt = [&] (int flavor, float drive) -> double
         {
@@ -149,6 +149,25 @@ inline TubeCurveReport runTubeCurveVerifications()
             }
             return std::sqrt (sum / (double) (n - skip));
         };
+
+        // Prefer ~+6.5 dB vs input at −18 (closer to Diode); allow 0..+11 dB.
+        const float rmsIn = std::pow (10.0f, LevelReference::kReferenceRmsDb / 20.0f);
+        const double lo = (double) rmsIn * std::pow (10.0, 0.0 / 20.0);
+        const double hi = (double) rmsIn * std::pow (10.0, 11.0 / 20.0);
+
+        for (float drive : { 0.5f, 1.0f })
+        {
+            const double out = rmsAt (TubeFlavorIds::ax7, drive);
+            std::ostringstream oss;
+            oss << "−18 AX7 Drive=" << drive << " RMS_out=" << out
+                << " (band " << lo << ".." << hi << ")";
+            if (out < 0.0)
+                r.fail (oss.str() + " (NaN)");
+            else if (out >= lo && out <= hi)
+                r.pass (oss.str());
+            else
+                r.fail (oss.str() + " (loudness outside 0..+11 dB)");
+        }
 
         const double ax = rmsAt (TubeFlavorIds::ax7, 0.55f);
         const double mid = rmsAt (TubeFlavorIds::type5751, 0.55f);
@@ -222,10 +241,10 @@ inline TubeCurveReport runTubeCurveVerifications()
         oss << "Drive ramp H2..5(0.5)=" << hLo << " H2..5(1.0)=" << hHi;
         if (hLo < 0.0 || hHi < 0.0)
             r.fail (oss.str() + " (NaN)");
-        else if (hHi > hLo * 1.05)
+        else if (hHi > hLo * 1.5)
             r.pass (oss.str());
         else
-            r.fail (oss.str() + " (expected more harmonics at Drive 1)");
+            r.fail (oss.str() + " (expected H2..5 at Drive 1 ≫ Drive 0.5)");
     }
 
     // Parked waveshape still C¹ (TubeCurve kept in-tree)

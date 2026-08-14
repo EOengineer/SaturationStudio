@@ -106,19 +106,21 @@ private:
 
     void updateMakeup() noexcept
     {
-        // Mild loudness stabilize vs Drive; stage already maps Drive→grid gain.
-        // Blend toward 1/sqrt(gridGain proxy) so Drive 1 is not wildly louder than 0.5.
+        // Stabilize −18 loudness as Drive digs into clip (stage owns saturation depth).
+        // Fixed +6.5 dB output nudge so Tube sits closer to Diode loudness at −18.
+        constexpr float kOutputNudge = 2.113489f; // +6.5 dB
         const float d = std::clamp (drive, 0.0f, 1.0f);
         if (d < 1.0e-6f)
         {
             makeupGain = 1.0f;
             return;
         }
-        const float gridProxy = std::max (1.0e-3f, std::pow (d, 1.35f) * 28.0f);
-        const float comp = 1.0f / std::sqrt (gridProxy / 8.0f); // ~unity-ish around Drive~0.45
-        const float blend = 0.35f * std::pow (d, 0.85f);
-        makeupGain = 1.0f + blend * (comp - 1.0f);
-        makeupGain = std::clamp (makeupGain, 0.25f, 4.0f);
+        // Match TriodeStage grid map (kMaxGridGain=72, kDriveCurve=2.55).
+        const float gridProxy = std::max (1.0e-3f, std::pow (d, 2.55f) * 72.0f);
+        const float comp = 1.0f / std::sqrt (std::max (gridProxy / 7.0f, 1.0e-3f));
+        const float blend = 0.50f * std::pow (d, 0.75f);
+        makeupGain = (1.0f + blend * (comp - 1.0f)) * kOutputNudge;
+        makeupGain = std::clamp (makeupGain, 0.35f, 3.5f);
     }
 
     int tubeFlavor = TubeFlavorIds::ax7;

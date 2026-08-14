@@ -92,6 +92,9 @@ clang++ -std=c++17 -O2 -I Source tools/diode_aliasing_verify_main.cpp -o tools/d
 clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
 ./tools/tube_curve_verify
 
+clang++ -std=c++17 -O2 -I Source tools/tube_aliasing_verify_main.cpp -o tools/tube_aliasing_verify
+./tools/tube_aliasing_verify
+
 clang++ -std=c++17 -O2 -I Source tools/tube_device_verify_main.cpp -o tools/tube_device_verify
 ./tools/tube_device_verify
 
