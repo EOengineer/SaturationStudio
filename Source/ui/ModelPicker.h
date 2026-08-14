@@ -22,7 +22,7 @@ public:
         };
         addAndMakeVisible (collapseButton);
         addAndMakeVisible (modelBox);
-        modelBox.addItemList ({ "Diode", "Tube", "Tape", "Transformer", "Preamp" }, 1);
+        modelBox.addItemList ({ "Diode", "Tube" }, 1);
         modelBox.setSelectedItemIndex (0, juce::dontSendNotification);
     }
 

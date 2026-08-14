@@ -9,11 +9,11 @@ v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology mo
 - One-band saturator with adjustable linear-phase low/high cuts
 - **Diode** model: Shockley feedback clipper with Drive→`Rin`, Si/Ge/LED/Asym flavors
 - **Tube** model: live Koren `TriodeStage` Newton; flavors **12AX7 / 5751 / 12AU7**, same Drive/−18 contract
-- **Tape / Transformer / Preamp** models: same methodology (symmetric soft / iron asym / 1073·API flavors)
+- **Tape / Transformer / Preamp** models: same methodology (symmetric soft / iron asym / 1073·API flavors) — DSP present; temporarily hidden from the Model picker
 - **Band** makeup (`outputDb`) — reserved for future per-band volume
 - Modeling reference **−18 dBFS** at plugin input (`LevelReference`) — use DAW gain to hit it for now
-- Model families: Diode, Tube, Tape, Transformer, Preamp (Diode + Tube are Newton circuit paths; others ADAA waveshapers)
-- Diode flavors (Si / Ge / LED / Asym) and Preamp flavors (Neve 1073 / API 512) wired in UI
+- Model families in UI: **Diode**, **Tube** (Tape / Transformer / Preamp in-tree but hidden until revisited)
+- Diode flavors (Si / Ge / LED / Asym) and Tube flavors (12AX7 / 5751 / 12AU7) wired in UI
 - Spectrum meter 20 Hz–20 kHz with in-band highlight + saturation heat placeholder
 - Offline DSP verifies (`tools/`)
 - Growing **physically modeled component library** (`Source/dsp/devices/`: diodes, `TubeDevice` triodes, …) composed into clippers — not a full Champ amp

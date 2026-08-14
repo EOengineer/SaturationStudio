@@ -4,13 +4,13 @@ SaturationStudio uses **topology families**, not named guitar pedals. Longer-ter
 
 | Family | Teaches toward tube amps | v1 |
 |--------|--------------------------|----|
-| **Diode** | Device I–V, Newton nets, reactive C, feedback OA | Shockley `DiodeDevice` (junction + bulk Rs) + ideal-OA feedback clipper |
-| **Tube** | Smooth transfer, even harmonics, eventual triode stages | Live `TubeDevice` + `TriodeStage` Newton; flavors 12AX7 / 5751 / 12AU7 |
-| **Tape** | Soft clip + HF loss / compression character | Soft symmetric algebraic ADAA |
-| **Transformer** | Hysteresis / memory nonlinearities | Asymmetric algebraic ADAA (no hysteresis yet) |
-| **Preamp** | Console drive curves + iron (1073 / API flavors) | Asymmetric tanh flavors (1073 / API) |
+| **Diode** | Device I–V, Newton nets, reactive C, feedback OA | Shockley `DiodeDevice` (junction + bulk Rs) + ideal-OA feedback clipper — **UI live** |
+| **Tube** | Smooth transfer, even harmonics, triode stage | Live `TubeDevice` + `TriodeStage` Newton; flavors 12AX7 / 5751 / 12AU7 — **UI live** |
+| **Tape** | Soft clip + HF loss / compression character | Soft symmetric algebraic ADAA — **hidden from UI** (WIP) |
+| **Transformer** | Hysteresis / memory nonlinearities | Asymmetric algebraic ADAA (no hysteresis yet) — **hidden from UI** (WIP) |
+| **Preamp** | Console drive curves + iron (1073 / API flavors) | Asymmetric tanh flavors — **hidden from UI** (WIP) |
 
-Clippers stay separable so each nonlinearity stays inspectable and reusable when composing larger stages.
+Clippers stay separable so each nonlinearity stays inspectable and reusable when composing larger stages. The Model picker currently exposes **Diode** and **Tube** only; Tape / Transformer / Preamp remain in-tree and in offline verifies for reintroduction.
 
 **Not a SaturationStudio goal:** a full Champ (or other complete amp). Grow reusable parts; compose them into clippers.
 
