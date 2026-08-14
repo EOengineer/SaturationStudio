@@ -95,6 +95,9 @@ clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_
 clang++ -std=c++17 -O2 -I Source tools/tube_device_verify_main.cpp -o tools/tube_device_verify
 ./tools/tube_device_verify
 
+clang++ -std=c++17 -O2 -I Source tools/tube_stage_verify_main.cpp -o tools/tube_stage_verify
+./tools/tube_stage_verify
+
 clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/family_curves_verify
 ./tools/family_curves_verify
 ```
@@ -119,7 +122,7 @@ See [`docs/testing.md`](docs/testing.md).
 | [`docs/testing.md`](docs/testing.md) | Verify suite |
 | [`docs/models/overview.md`](docs/models/overview.md) | Topology roadmap → tube amps |
 | [`docs/models/diode.md`](docs/models/diode.md) | Feedback OA clipper; Drive = Rin |
-| [`docs/models/tube.md`](docs/models/tube.md) | Tube waveshape + TubeDevice part |
+| [`docs/models/tube.md`](docs/models/tube.md) | Tube waveshape + TubeDevice + offline TriodeStage |
 | [`docs/models/tape.md`](docs/models/tape.md) | Tape soft symmetric |
 | [`docs/models/transformer.md`](docs/models/transformer.md) | Transformer iron (no hysteresis yet) |
 | [`docs/models/preamp.md`](docs/models/preamp.md) | Preamp 1073 / API flavors |

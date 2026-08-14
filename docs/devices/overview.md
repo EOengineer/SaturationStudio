@@ -14,6 +14,14 @@ Proven diode stack:
 DiodeDevice → FeedbackDiodeClipper (and earlier shunt nets) → DiodeModel
 ```
 
+Tube stack (in progress):
+
+```text
+TubeDevice → TriodeStage (offline Newton consumer) → TubeModel live flip (gated)
+```
+
+Live Tube UI still uses the waveshape path until the stage is wired in.
+
 ## What a device is
 
 | Rule | Meaning |
@@ -28,7 +36,9 @@ DiodeDevice → FeedbackDiodeClipper (and earlier shunt nets) → DiodeModel
 | Part | Role | Status |
 |------|------|--------|
 | [`DiodeDevice`](../../Source/dsp/devices/DiodeDevice.h) | Shockley junction + bulk \(R_s\) | Live — used by diode clippers |
-| [`TubeDevice`](../../Source/dsp/devices/TubeDevice.h) | Koren triode \(I_p(V_{gk}, V_{ak})\) + conductances | Library part — **not** yet stamped by a Tube saturator |
+| [`TubeDevice`](../../Source/dsp/devices/TubeDevice.h) | Koren triode \(I_p(V_{gk}, V_{ak})\) + conductances | Library part |
+| [`TriodeStage`](../../Source/dsp/devices/TriodeStage.h) | Common-cathode Newton island (stamps `TubeDevice`) | Offline consumer — not live in TubeModel yet |
+| [`NewtonSolver`](../../Source/dsp/devices/NewtonSolver.h) | Tiny dense Newton helper | Shared by nets |
 | Transformer / iron | Hysteresis / magnetics | Later |
 | Power tubes, etc. | Beam / pentode laws | Later |
 
@@ -37,10 +47,10 @@ DiodeDevice → FeedbackDiodeClipper (and earlier shunt nets) → DiodeModel
 | Layer | Examples |
 |-------|----------|
 | **Parts** | `DiodeDevice`, `TubeDevice` |
-| **Circuit consumers** | `FeedbackDiodeClipper`, future `TriodeStage` (common-cathode Newton) |
-| **Product saturators** | `DiodeModel`, waveshape `TubeModel` (interim), Tape / Transformer / Preamp curves |
+| **Circuit consumers** | `FeedbackDiodeClipper`, `TriodeStage` (common-cathode Newton; offline verifies via `tube_stage_verify`) |
+| **Product saturators** | `DiodeModel`, waveshape `TubeModel` (interim until stage flip), Tape / Transformer / Preamp curves |
 
-Live **Tube** UI flavors (12AX7 / 5751 / 12AU7) are still **waveshape stand-ins**. They should eventually select `TubeDevice` factories once a stage consumer exists.
+Live **Tube** UI flavors (12AX7 / 5751 / 12AU7) are still **waveshape stand-ins**. They should select `TubeDevice` factories once `TubeModel` flips to `TriodeStage`.
 
 ## Explicit non-goal
 
@@ -49,6 +59,6 @@ Live **Tube** UI flavors (12AX7 / 5751 / 12AU7) are still **waveshape stand-ins*
 ## Related docs
 
 - [`docs/models/diode.md`](../models/diode.md) — diode part → clipper → model
-- [`docs/models/tube.md`](../models/tube.md) — interim waveshape Tube; device path
+- [`docs/models/tube.md`](../models/tube.md) — interim waveshape Tube; device + stage path
 - [`docs/architecture.md`](../architecture.md) — plugin signal path
 - [`docs/models/overview.md`](../models/overview.md) — family skill map
