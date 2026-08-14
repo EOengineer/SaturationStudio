@@ -48,6 +48,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SaturationStudioAudioProcess
         juce::StringArray { "Silicon", "Germanium", "LED", "Asymmetric" }, 0));
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
+        juce::ParameterID { ParamIDs::tubeFlavor, 1 }, "Tube Flavor",
+        juce::StringArray { "12AX7", "5751", "12AU7" }, 0));
+
+    params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParamIDs::preampFlavor, 1 }, "Preamp Flavor",
         juce::StringArray { "Neve 1073", "API 512" }, 0));
 
@@ -101,6 +105,7 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
     auto* bandOut = apvts.getRawParameterValue (ParamIDs::outputDb);
     auto* model = apvts.getRawParameterValue (ParamIDs::satModel);
     auto* diode = apvts.getRawParameterValue (ParamIDs::diodeFlavor);
+    auto* tube = apvts.getRawParameterValue (ParamIDs::tubeFlavor);
     auto* preamp = apvts.getRawParameterValue (ParamIDs::preampFlavor);
 
     float lowHz = low != nullptr ? low->load() : 20.0f;
@@ -115,6 +120,7 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
     engine.setMix (mix != nullptr ? mix->load() : 1.0f);
     engine.setOutputDb (bandOut != nullptr ? bandOut->load() : 0.0f);
     engine.setDiodeFlavor (diode != nullptr ? juce::roundToInt (diode->load()) : 0);
+    engine.setTubeFlavor (tube != nullptr ? juce::roundToInt (tube->load()) : 0);
     engine.setPreampFlavor (preamp != nullptr ? juce::roundToInt (preamp->load()) : 0);
 }
 

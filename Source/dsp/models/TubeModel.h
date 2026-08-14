@@ -6,7 +6,8 @@
 #include <vector>
 
 /**
- * Tube family saturator: asymmetric tanh transfer + first-order ADAA.
+ * Tube family saturator: triode-ish asymmetric tanh + first-order ADAA.
+ * Flavors (12AX7 / 5751 / 12AU7) are waveshape stand-ins for mu — not Koren Newton.
  * Same Drive / −18 makeup contract as Diode; even-heavy vs Silicon diode.
  */
 class TubeModel final : public SaturationModel
@@ -19,7 +20,7 @@ public:
     {
         const int ch = numChannels > 0 ? numChannels : 1;
         prevDriven.assign ((size_t) ch, 0.0f);
-        coeffs = tube::defaultCoeffs();
+        coeffs = tube::coeffsForFlavor (tubeFlavor);
         updateGains();
     }
 
@@ -34,6 +35,14 @@ public:
         updateGains();
     }
 
+    void setTubeFlavor (int flavor) override
+    {
+        tubeFlavor = flavor;
+        coeffs = tube::coeffsForFlavor (flavor);
+        updateGains();
+    }
+
+    int getTubeFlavor() const noexcept { return tubeFlavor; }
     float getDrive() const noexcept { return drive; }
 
     void process (float* const* channels, int numChannels, int numSamples) override
@@ -77,10 +86,11 @@ public:
 private:
     void updateGains() noexcept
     {
-        driveGain = tube::driveGainLinear (drive);
+        driveGain = tube::driveGainLinear (drive, coeffs);
         makeupGain = tube::makeupGainLinear (drive, coeffs);
     }
 
+    int tubeFlavor = TubeFlavorIds::ax7;
     float drive = 0.5f;
     float driveGain = 1.0f;
     float makeupGain = 1.0f;

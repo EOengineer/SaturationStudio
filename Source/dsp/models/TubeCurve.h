@@ -7,27 +7,43 @@
 /**
  * C¹ tube-family soft transfer + first-order ADAA helpers (JUCE-free).
  *
- * Sharpened asymmetric tanh:
+ * Sharpened asymmetric tanh (triode-ish stand-in for mu):
  *   f(x) = (a/s) * tanh(s * x / a)
  *   f'(0) = 1, asymptote → ±a/s
  *   F(x) = (a/s)² * log(cosh(s * x / a))
  *
- * Strong polarity asymmetry → even harmonics; Drive map goes to 36 dB so
- * max Drive is denser than Diode while Drive~0.5 stays usable at −18.
+ * Flavors map common preamp tubes to Drive density + asymmetry (not Koren Newton).
+ * Strong polarity asymmetry → even harmonics.
  */
 namespace tube
 {
 struct Coeffs
 {
-    float aPos = 0.90f;
-    float aNeg = 0.24f;   // much lower → strong 2nd
-    float sharpness = 1.35f;
+    float aPos = 0.88f;
+    float aNeg = 0.22f;   // lower → stronger 2nd
+    float sharpness = 1.40f;
     float makeupBiasDb = 0.0f;
+    float maxDriveDb = 38.0f;
+    float driveCurve = 1.50f;
 };
+
+inline Coeffs coeffsForFlavor (int flavor) noexcept
+{
+    switch (flavor)
+    {
+        case 1: // 5751 — mid mu (~70)
+            return { 0.92f, 0.32f, 1.25f, 0.0f, 30.0f, 1.45f };
+        case 2: // 12AU7 — low mu (~20), cleaner
+            return { 0.98f, 0.55f, 1.10f, 0.1f, 24.0f, 1.35f };
+        case 0: // 12AX7 — high mu (~100), densest
+        default:
+            return { 0.88f, 0.22f, 1.40f, 0.0f, 38.0f, 1.50f };
+    }
+}
 
 inline Coeffs defaultCoeffs() noexcept
 {
-    return {};
+    return coeffsForFlavor (0);
 }
 
 inline float thresholdFor (const Coeffs& c, float x) noexcept
@@ -65,14 +81,17 @@ inline float adaa (float x, float xPrev, const Coeffs& c) noexcept
     return shape (x, c);
 }
 
-inline float driveGainLinear (float drive01) noexcept
+inline float driveGainLinear (float drive01, const Coeffs& c) noexcept
 {
     drive01 = std::clamp (drive01, 0.0f, 1.0f);
-    constexpr float kMaxDb = 36.0f;
-    constexpr float kCurve = 1.55f;
-    const float t = std::pow (drive01, kCurve);
-    const float db = kMaxDb * t;
+    const float t = std::pow (drive01, std::max (1.0f, c.driveCurve));
+    const float db = c.maxDriveDb * t;
     return std::pow (10.0f, db / 20.0f);
+}
+
+inline float driveGainLinear (float drive01) noexcept
+{
+    return driveGainLinear (drive01, defaultCoeffs());
 }
 
 inline float makeupGainLinear (float drive01, const Coeffs& c) noexcept
@@ -82,7 +101,7 @@ inline float makeupGainLinear (float drive01, const Coeffs& c) noexcept
         return std::pow (10.0f, c.makeupBiasDb / 20.0f);
 
     constexpr float kRefPeak = 0.177827941f;
-    const float g = driveGainLinear (drive01);
+    const float g = driveGainLinear (drive01, c);
     const float driven = kRefPeak * g;
     const float shaped = 0.5f * (std::abs (shape (driven, c)) + std::abs (shape (-driven, c)));
     const float ratio = shaped / std::max (kRefPeak, 1.0e-8f);

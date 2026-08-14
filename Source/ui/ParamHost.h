@@ -41,11 +41,14 @@ public:
                            juce::dontSendNotification);
     }
 
-    void showTubeLive()
+    void showTubeFlavors()
     {
-        flavorBox.setVisible (false);
-        flavorLabel.setVisible (false);
-        hintLabel.setText ("Tube saturator — asymmetric tanh, even harmonics; ADAA + 4× OS",
+        flavorBox.clear (juce::dontSendNotification);
+        flavorBox.addItemList ({ "12AX7", "5751", "12AU7" }, 1);
+        flavorBox.setEnabled (true);
+        flavorBox.setVisible (true);
+        flavorLabel.setVisible (true);
+        hintLabel.setText ("Tube saturator — 12AX7 / 5751 / 12AU7 waveshape (mu feel); ADAA + 4× OS",
                            juce::dontSendNotification);
     }
 

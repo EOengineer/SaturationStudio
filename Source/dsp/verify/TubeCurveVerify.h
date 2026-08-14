@@ -46,10 +46,11 @@ inline TubeCurveReport runTubeCurveVerifications()
     constexpr int n = 8192;
     constexpr float kPi = 3.14159265358979323846f;
 
-    // Drive=0 identity
+    // Drive=0 identity (default 12AX7)
     {
         TubeModel m;
         m.prepare (sr, n, 1);
+        m.setTubeFlavor (TubeFlavorIds::ax7);
         m.setDrive (0.0f);
         m.reset();
 
@@ -76,7 +77,7 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // −18 / Drive 0.5: even > odd (vs Silicon diode odd-heavy)
+    // −18 / Drive 0.5 12AX7: even > odd (vs Silicon diode odd-heavy)
     {
         auto runH2H3 = [&] (auto& model) -> std::pair<double, double>
         {
@@ -95,6 +96,7 @@ inline TubeCurveReport runTubeCurveVerifications()
 
         TubeModel tube;
         tube.prepare (sr, n, 1);
+        tube.setTubeFlavor (TubeFlavorIds::ax7);
         tube.setDrive (0.5f);
         tube.reset();
         const auto [h2t, h3t] = runH2H3 (tube);
@@ -107,7 +109,7 @@ inline TubeCurveReport runTubeCurveVerifications()
         const auto [h2d, h3d] = runH2H3 (diode);
 
         std::ostringstream oss;
-        oss << "Tube H2=" << h2t << " H3=" << h3t << " | Si diode H2=" << h2d << " H3=" << h3d;
+        oss << "AX7 H2=" << h2t << " H3=" << h3t << " | Si diode H2=" << h2d << " H3=" << h3d;
 
         if (h2t < 1.0e-6)
             r.fail (oss.str() + " (Tube even too weak)");
@@ -119,12 +121,20 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.pass (oss.str());
     }
 
-    // Drive ramp + finite
+    // Flavor ordering: hotter Drive map (AX7 > 5751 > AU7) + more even at Drive 0.5
     {
-        auto third = [&] (float drive) -> double
+        const auto cAx = tube::coeffsForFlavor (TubeFlavorIds::ax7);
+        const auto c5751 = tube::coeffsForFlavor (TubeFlavorIds::type5751);
+        const auto cAu = tube::coeffsForFlavor (TubeFlavorIds::au7);
+        const float gAx = tube::driveGainLinear (1.0f, cAx);
+        const float g5751 = tube::driveGainLinear (1.0f, c5751);
+        const float gAu = tube::driveGainLinear (1.0f, cAu);
+
+        auto h2At = [&] (int flavor, float drive) -> double
         {
             TubeModel m;
             m.prepare (sr, n, 1);
+            m.setTubeFlavor (flavor);
             m.setDrive (drive);
             m.reset();
             const float rmsLin = std::pow (10.0f, LevelReference::kReferenceRmsDb / 20.0f);
@@ -135,19 +145,65 @@ inline TubeCurveReport runTubeCurveVerifications()
                 buf[(size_t) i] = peak * std::sin (2.0f * kPi * f0 * (float) i / (float) sr);
             float* chans[] = { buf.data() };
             m.process (chans, 1, n);
-            for (float v : buf)
-                if (! std::isfinite (v))
+            for (int i = 256; i < n; ++i)
+                if (! std::isfinite (buf[(size_t) i]))
                     return -1.0;
             return tubeGoertzelPower (buf.data() + 256, n - 256, 2.0 * f0, sr);
         };
 
-        const double h2lo = third (0.5f);
-        const double h2hi = third (1.0f);
-        // Also check overall error growth (H2 alone can fall when waveform hardens)
+        const double h2Ax = h2At (TubeFlavorIds::ax7, 0.5f);
+        const double h25751 = h2At (TubeFlavorIds::type5751, 0.5f);
+        const double h2Au = h2At (TubeFlavorIds::au7, 0.5f);
+
+        std::ostringstream oss;
+        oss << "Drive1 gain AX7=" << gAx << " 5751=" << g5751 << " AU7=" << gAu
+            << " | Drive0.5 H2 AX7=" << h2Ax << " 5751=" << h25751 << " AU7=" << h2Au;
+
+        const bool gainOrder = gAx > g5751 && g5751 > gAu;
+        const bool h2Order = h2Ax > 0.0 && h2Ax > h2Au * 1.25 && h25751 > h2Au;
+        if (! gainOrder)
+            r.fail (oss.str() + " (expected Drive1 gain AX7 > 5751 > AU7)");
+        else if (! h2Order)
+            r.fail (oss.str() + " (expected Drive0.5 H2 AX7 > AU7, 5751 > AU7)");
+        else
+            r.pass (oss.str());
+    }
+
+    // All flavors finite at Drive 1
+    {
+        bool allOk = true;
+        std::ostringstream oss;
+        oss << "flavors finite Drive1";
+        for (int flavor : { TubeFlavorIds::ax7, TubeFlavorIds::type5751, TubeFlavorIds::au7 })
+        {
+            TubeModel m;
+            m.prepare (sr, n, 1);
+            m.setTubeFlavor (flavor);
+            m.setDrive (1.0f);
+            m.reset();
+            const float peak = 0.9f;
+            std::vector<float> buf ((size_t) n);
+            for (int i = 0; i < n; ++i)
+                buf[(size_t) i] = peak * std::sin (2.0f * kPi * 1000.0f * (float) i / (float) sr);
+            float* chans[] = { buf.data() };
+            m.process (chans, 1, n);
+            for (float v : buf)
+                if (! std::isfinite (v))
+                    allOk = false;
+        }
+        if (allOk)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
+    // Drive ramp on AX7 + finite
+    {
         auto errAt = [&] (float drive) -> double
         {
             TubeModel m;
             m.prepare (sr, n, 1);
+            m.setTubeFlavor (TubeFlavorIds::ax7);
             m.setDrive (drive);
             m.reset();
             const float rmsLin = std::pow (10.0f, LevelReference::kReferenceRmsDb / 20.0f);
@@ -161,6 +217,8 @@ inline TubeCurveReport runTubeCurveVerifications()
             double e = 0.0, ref = 0.0;
             for (int i = 256; i < n; ++i)
             {
+                if (! std::isfinite (buf[(size_t) i]))
+                    return -1.0;
                 const double dry = (double) peak * std::sin (2.0 * kPi * (double) f0 * (double) i / sr);
                 const double d = (double) buf[(size_t) i] - dry;
                 e += d * d;
@@ -171,9 +229,8 @@ inline TubeCurveReport runTubeCurveVerifications()
         const double elo = errAt (0.5f);
         const double ehi = errAt (1.0f);
         std::ostringstream oss;
-        oss << "Drive ramp H2(0.5)=" << h2lo << " H2(1.0)=" << h2hi
-            << " err(0.5)=" << elo << " err(1.0)=" << ehi;
-        if (h2lo < 0.0 || h2hi < 0.0)
+        oss << "Drive ramp err(0.5)=" << elo << " err(1.0)=" << ehi;
+        if (elo < 0.0 || ehi < 0.0)
             r.fail (oss.str() + " (NaN)");
         else if (ehi > elo * 1.25)
             r.pass (oss.str());
@@ -181,13 +238,19 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.fail (oss.str());
     }
 
-    // f'(0)≈1
+    // f'(0)≈1 for each flavor
     {
-        const auto c = tube::defaultCoeffs();
-        const float eps = 1.0e-4f;
-        const float deriv = (tube::shape (eps, c) - tube::shape (-eps, c)) / (2.0f * eps);
-        if (std::abs (deriv - 1.0f) < 1.0e-3f)
-            r.pass ("shape derivative at 0 ≈ 1");
+        bool okDeriv = true;
+        for (int flavor : { TubeFlavorIds::ax7, TubeFlavorIds::type5751, TubeFlavorIds::au7 })
+        {
+            const auto c = tube::coeffsForFlavor (flavor);
+            const float eps = 1.0e-4f;
+            const float deriv = (tube::shape (eps, c) - tube::shape (-eps, c)) / (2.0f * eps);
+            if (std::abs (deriv - 1.0f) >= 1.0e-3f)
+                okDeriv = false;
+        }
+        if (okDeriv)
+            r.pass ("shape derivative at 0 ≈ 1 (all flavors)");
         else
             r.fail ("shape derivative at 0 not ≈ 1");
     }

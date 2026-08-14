@@ -26,5 +26,6 @@ public:
 
     virtual void setDrive (float /*drive01*/) {}
     virtual void setDiodeFlavor (int /*flavor*/) {}
+    virtual void setTubeFlavor (int /*flavor*/) {}
     virtual void setPreampFlavor (int /*flavor*/) {}
 };
