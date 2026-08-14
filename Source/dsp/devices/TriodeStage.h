@@ -15,6 +15,8 @@
  * KCL cathode: Ip - Vk/Rk - Ic = 0  (Ck trapezoidal companion)
  *
  * Teaching defaults (Ra/Rk/Ck/Vb) are starting points — not a Champ amp.
+ * Ra=120k (raised from 100k) for a bit more stage gain into plate clip.
+ * Grid clamp ≈ [−8, +1] V; Drive→grid map owns saturation depth (not TubeDevice µ/KP).
  * No NFB. Live TubeModel stamps this stage per channel inside the 4× OS island.
  *
  * See docs/devices/overview.md, docs/models/tube.md.
@@ -56,10 +58,10 @@ struct CapacitorTrap
 class TriodeStage
 {
 public:
-    /** Default teaching load: Ra=100k, Rk=1.5k, Ck=22µF, Vb=250 V. */
+    /** Default teaching load: Ra=120k, Rk=1.5k, Ck=22µF, Vb=250 V. */
     void prepare (float sampleRateHz,
                   TubeDevice tubeDevice = twelveAx7(),
-                  float plateR = 100.0e3f,
+                  float plateR = 120.0e3f,
                   float cathodeR = 1.5e3f,
                   float bypassC = 22.0e-6f,
                   float bplus = 250.0f) noexcept
@@ -131,9 +133,10 @@ public:
     float getGridGain() const noexcept { return gridGain; }
 
 private:
-    static constexpr float kPlateToAudio = 1.0f / 40.0f;
-    static constexpr float kMaxGridGain = 28.0f; // vin=1 → 28 V before clamp
-    static constexpr float kDriveCurve = 1.35f;
+    static constexpr float kPlateToAudio = 1.0f / 300.0f; // plate AC → plugin float
+    static constexpr float kMaxGridGain = 72.0f;          // overall hotter Drive→grid
+    static constexpr float kDriveCurve = 2.55f;           // mid milder; Drive 1 still maxes
+
 
     void updateGridGain() noexcept
     {
@@ -201,7 +204,7 @@ private:
     float processSampleRaw (float vin) noexcept
     {
         float vg = gridGain * vin;
-        vg = std::clamp (vg, -5.0f, 1.0f);
+        vg = std::clamp (vg, -8.0f, 1.0f);
 
         std::array<float, 2> x { vp, vk };
         NewtonSolver<2> newton;
@@ -228,7 +231,7 @@ private:
     }
 
     float fs = 48000.0f;
-    float ra = 100.0e3f, rk = 1.5e3f, vb = 250.0f;
+    float ra = 120.0e3f, rk = 1.5e3f, vb = 250.0f;
     float ga = 0.0f, gk = 0.0f;
     float vp = 170.0f, vk = 1.5f, idleVp = 170.0f;
     float drive = 0.5f;
