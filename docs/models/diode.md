@@ -18,7 +18,7 @@ DiodeModel               → Drive→Rin → feedback clipper → makeup
 x → Newton feedback clipper (Rin from Drive) → Makeup → y
 ```
 
-`Drive ≈ 0` hard-bypasses to identity. **Drive is a component change:** \(R_\mathrm{in}=R_f/G(\mathrm{drive})\) with \(G=10^{(34\cdot\mathrm{drive}^{1.3})/20}\) (~1 → ~50) — same feel as the old pre-gain map, not a separate input gain stage. Anti-aliasing relies on **4× OS** (no ADAA).
+`Drive ≈ 0` is transparent via a short dry/wet blend (same idea as Tube). **Drive is a component change:** \(R_\mathrm{in}=R_f/G(\mathrm{drive})\) with \(G=10^{(34\cdot\mathrm{drive}^{1.3})/20}\) (~1 → ~50) — same feel as the old pre-gain map, not a separate input gain stage. Anti-aliasing relies on **4× OS** (no ADAA).
 
 ## Feedback clipper physics
 

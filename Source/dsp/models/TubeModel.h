@@ -77,9 +77,13 @@ public:
             }
         }
 
-        if (drive < 1.0e-6f)
-            return; // identity bypass
+        // Short dry/wet so Drive≈0 stays identity without cliffing to a near-silent stage.
+        constexpr float kBlendDrive = 0.08f;
+        const float w = std::clamp (drive / kBlendDrive, 0.0f, 1.0f);
+        if (w <= 0.0f)
+            return; // identity
 
+        const float dryW = 1.0f - w;
         for (int ch = 0; ch < numChannels; ++ch)
         {
             float* data = channels[ch];
@@ -88,7 +92,11 @@ public:
 
             auto& stage = stages[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
-                data[i] = stage.processSample (data[i]) * makeupGain;
+            {
+                const float x = data[i];
+                const float wet = stage.processSample (x) * makeupGain;
+                data[i] = dryW * x + w * wet;
+            }
         }
     }
 
@@ -115,8 +123,8 @@ private:
             makeupGain = 1.0f;
             return;
         }
-        // Match TriodeStage grid map (kMaxGridGain=86.4, kDriveCurve=2.55).
-        const float gridProxy = std::max (1.0e-3f, std::pow (d, 2.55f) * 86.4f);
+        // Match TriodeStage grid map (kMaxGridGain=86.4, kDriveCurve=1.6).
+        const float gridProxy = std::max (1.0e-3f, std::pow (d, 1.6f) * 86.4f);
         const float comp = 1.0f / std::sqrt (std::max (gridProxy / 7.0f, 1.0e-3f));
         const float blend = 0.50f * std::pow (d, 0.75f);
         makeupGain = (1.0f + blend * (comp - 1.0f)) * kOutputNudge;
