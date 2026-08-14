@@ -85,6 +85,9 @@ clang++ -std=c++17 -O2 -I Source tools/engine_passthrough_verify_main.cpp -o too
 clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diode_curve_verify
 ./tools/diode_curve_verify
 
+clang++ -std=c++17 -O2 -I Source tools/diode_aliasing_verify_main.cpp -o tools/diode_aliasing_verify
+./tools/diode_aliasing_verify
+
 clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
 ./tools/tube_curve_verify
 

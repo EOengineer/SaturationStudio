@@ -16,6 +16,9 @@ clang++ -std=c++17 -O2 -I Source tools/engine_passthrough_verify_main.cpp -o too
 clang++ -std=c++17 -O2 -I Source tools/diode_curve_verify_main.cpp -o tools/diode_curve_verify
 ./tools/diode_curve_verify
 
+clang++ -std=c++17 -O2 -I Source tools/diode_aliasing_verify_main.cpp -o tools/diode_aliasing_verify
+./tools/diode_aliasing_verify
+
 clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
 ./tools/tube_curve_verify
 
@@ -30,6 +33,7 @@ clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/fa
 | `band_split_verify` | FIR cascade latency, wide-open side≈0, impulse delay, narrow-band energy, cutoff clamp |
 | `engine_passthrough_verify` | Registry, Diode Drive=0 null through split, factory default |
 | `diode_curve_verify` | Device physics (incl. bulk Rs), DC/FB/RC nets, Drive→Rin, Drive=0, harmonics, high-Drive finite |
+| `diode_aliasing_verify` | Silicon aliasing proxy: 1× vs 4× harm/total at 5 kHz (−18, Drive 0.5 gate; Drive 1.0 report). Ongoing AA tool — not JUCE OS identical; Plugin Doctor for host sweeps |
 | `tube_curve_verify` | Drive=0 identity, even>odd at −18/Drive0.5 vs Si diode, Drive ramp, curve math |
 | `family_curves_verify` | Tape/Transformer/Preamp Drive=0 identity, finite at Drive=1, Tape odd-lean, Transformer even vs Si, Preamp Neve even-lean vs API |
 
@@ -38,7 +42,7 @@ clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/fa
 1. Put pure math / curve checks in `Source/dsp/verify/YourModelVerify.h` (prefer no JUCE).
 2. Add `tools/your_model_verify_main.cpp`.
 3. Assert known sine → expected harmonic ratios or transfer samples.
-4. Add an aliasing smoke (OS on vs off) once the model is nonlinear—may require a small JUCE-linked tool or host script.
+4. Add or extend an aliasing smoke (`diode_aliasing_verify` pattern: OS-rate process + LPF decimate + harm/total). Host/Plugin Doctor sweeps remain the ground truth.
 
 ## Host smoke
 

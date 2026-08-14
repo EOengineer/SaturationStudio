@@ -25,4 +25,6 @@ Raising the OS factor is on the table if abuse cases still alias after 4× — e
 
 ## Offline note
 
-`diode_curve_verify` checks the device/clipper/Drive/harmonics **without** JUCE oversampling. Full OS residual belongs in host listening / future OS-linked tools.
+`diode_curve_verify` checks the device/clipper/Drive/harmonics **without** oversampling.
+
+`diode_aliasing_verify` is the permanent AA development tool: Silicon diode at −18 dBFS, 5 kHz sine, Drive 0.5 (gate) and Drive 1.0 (report). It runs an analytic F× sine through `DiodeModel`, Kaiser-LPF decimates to 48 kHz, and prints harmonic/total ratio + residual dB for 1× vs 4×. That FIR proxy is **not** identical to `juce::dsp::Oversampling` equiripple half-bands — use it to catch regressions while iterating; confirm meaningful moves with Plugin Doctor / host sweeps.
