@@ -12,4 +12,5 @@ tools/engine_passthrough_verify
 tools/diode_curve_verify
 tools/diode_aliasing_verify
 tools/tube_curve_verify
+tools/tube_device_verify
 tools/family_curves_verify
