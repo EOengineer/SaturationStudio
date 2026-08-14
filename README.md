@@ -8,7 +8,7 @@ v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology mo
 
 - One-band saturator with adjustable linear-phase low/high cuts
 - **Diode** model: Shockley feedback clipper with Drive→`Rin`, Si/Ge/LED/Asym flavors
-- **Tube** model: asymmetric tanh + ADAA (even-heavy), same Drive/−18 contract
+- **Tube** model: triode-ish ADAA waveshape; flavors **12AX7 / 5751 / 12AU7** (mu feel), same Drive/−18 contract
 - **Tape / Transformer / Preamp** models: same methodology (symmetric soft / iron asym / 1073·API flavors)
 - **Band** makeup (`outputDb`) — reserved for future per-band volume
 - Modeling reference **−18 dBFS** at plugin input (`LevelReference`) — use DAW gain to hit it for now
@@ -114,7 +114,7 @@ See [`docs/testing.md`](docs/testing.md).
 | [`docs/testing.md`](docs/testing.md) | Verify suite |
 | [`docs/models/overview.md`](docs/models/overview.md) | Topology roadmap → tube amps |
 | [`docs/models/diode.md`](docs/models/diode.md) | Feedback OA clipper; Drive = Rin |
-| [`docs/models/tube.md`](docs/models/tube.md) | Tube asymmetric tanh |
+| [`docs/models/tube.md`](docs/models/tube.md) | Tube 12AX7 / 5751 / 12AU7 waveshape |
 | [`docs/models/tape.md`](docs/models/tape.md) | Tape soft symmetric |
 | [`docs/models/transformer.md`](docs/models/transformer.md) | Transformer iron (no hysteresis yet) |
 | [`docs/models/preamp.md`](docs/models/preamp.md) | Preamp 1073 / API flavors |

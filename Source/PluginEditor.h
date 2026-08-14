@@ -37,7 +37,7 @@ private:
 
     std::unique_ptr<SliderAttachment> lowCutAttachment, highCutAttachment, driveAttachment,
                                       bandAttachment, mixAttachment;
-    std::unique_ptr<ComboAttachment> modelAttachment, diodeFlavorAttachment, preampFlavorAttachment;
+    std::unique_ptr<ComboAttachment> modelAttachment, diodeFlavorAttachment, tubeFlavorAttachment, preampFlavorAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SaturationStudioAudioProcessorEditor)
 };

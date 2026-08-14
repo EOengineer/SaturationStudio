@@ -34,7 +34,7 @@ clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/fa
 | `engine_passthrough_verify` | Registry, Diode Drive=0 null through split, factory default |
 | `diode_curve_verify` | Device physics (incl. bulk Rs), DC/FB/RC nets, Drive→Rin, Drive=0, harmonics, high-Drive finite |
 | `diode_aliasing_verify` | Silicon aliasing proxy: 1× vs 4× harm/total at 5 kHz (−18, Drive 0.5 gate; Drive 1.0 report). Ongoing AA tool — not JUCE OS identical; Plugin Doctor for host sweeps |
-| `tube_curve_verify` | Drive=0 identity, even>odd at −18/Drive0.5 vs Si diode, Drive ramp, curve math |
+| `tube_curve_verify` | Drive=0 identity, AX7 even>odd vs Si diode, AX7>5751>AU7 Drive1 gain + Drive0.5 H2, flavors finite, Drive ramp, f'(0)≈1 |
 | `family_curves_verify` | Tape/Transformer/Preamp Drive=0 identity, finite at Drive=1, Tape odd-lean, Transformer even vs Si, Preamp Neve even-lean vs API |
 
 ## Adding tests for a new clipper

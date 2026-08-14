@@ -111,6 +111,7 @@ public:
                             numChannels);
             model->setDrive (drive);
             model->setDiodeFlavor (diodeFlavor);
+            model->setTubeFlavor (tubeFlavor);
             model->setPreampFlavor (preampFlavor);
         }
     }
@@ -120,6 +121,13 @@ public:
         diodeFlavor = flavor;
         if (model != nullptr)
             model->setDiodeFlavor (flavor);
+    }
+
+    void setTubeFlavor (int flavor)
+    {
+        tubeFlavor = flavor;
+        if (model != nullptr)
+            model->setTubeFlavor (flavor);
     }
 
     void setPreampFlavor (int flavor)
@@ -266,6 +274,7 @@ private:
     int reportedLatency = 0;
     int currentFamily = 0;
     int diodeFlavor = 0;
+    int tubeFlavor = 0;
     int preampFlavor = 0;
     float lowCutHz = 20.0f;
     float highCutHz = 20000.0f;

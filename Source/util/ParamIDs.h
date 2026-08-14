@@ -11,6 +11,7 @@ namespace ParamIDs
     inline constexpr const char* satModel  = "satModel";
 
     inline constexpr const char* diodeFlavor  = "diodeFlavor";
+    inline constexpr const char* tubeFlavor   = "tubeFlavor";
     inline constexpr const char* preampFlavor = "preampFlavor";
 }
 
@@ -29,6 +30,13 @@ namespace DiodeFlavorIds
     inline constexpr int germanium  = 1;
     inline constexpr int led        = 2;
     inline constexpr int asymmetric = 3;
+}
+
+namespace TubeFlavorIds
+{
+    inline constexpr int ax7      = 0; // 12AX7
+    inline constexpr int type5751 = 1; // 5751
+    inline constexpr int au7      = 2; // 12AU7
 }
 
 namespace PreampFlavorIds

@@ -51,6 +51,7 @@ void SaturationStudioAudioProcessorEditor::setupKnob (juce::Slider& s, juce::Lab
 void SaturationStudioAudioProcessorEditor::refreshFlavorHost()
 {
     diodeFlavorAttachment.reset();
+    tubeFlavorAttachment.reset();
     preampFlavorAttachment.reset();
 
     // Prefer APVTS (choice index) over ComboBox selection — avoids -1 / stale UI.
@@ -68,7 +69,9 @@ void SaturationStudioAudioProcessorEditor::refreshFlavorHost()
                 processor.getAPVTS(), ParamIDs::diodeFlavor, box);
             break;
         case 1:
-            paramHost.showTubeLive();
+            paramHost.showTubeFlavors();
+            tubeFlavorAttachment = std::make_unique<ComboAttachment> (
+                processor.getAPVTS(), ParamIDs::tubeFlavor, box);
             break;
         case 2:
             paramHost.showTapeLive();
@@ -82,7 +85,9 @@ void SaturationStudioAudioProcessorEditor::refreshFlavorHost()
                 processor.getAPVTS(), ParamIDs::preampFlavor, box);
             break;
         default:
-            paramHost.showTubeLive(); // should not happen; keep UI out of stub messaging
+            paramHost.showTubeFlavors();
+            tubeFlavorAttachment = std::make_unique<ComboAttachment> (
+                processor.getAPVTS(), ParamIDs::tubeFlavor, box);
             break;
     }
 
