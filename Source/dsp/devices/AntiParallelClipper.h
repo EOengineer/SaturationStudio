@@ -65,8 +65,11 @@ private:
             if (std::abs (v) > lim * 1.25f)
                 v = std::clamp (vin, -lim, lim);
 
-            const float id = dPos.current (v) - dNeg.current (-v);
-            const float gd = dPos.conductance (v) + dNeg.conductance (-v);
+            float ip = 0.0f, gp = 0.0f, in = 0.0f, gn = 0.0f;
+            dPos.stamp (v, ip, gp);
+            dNeg.stamp (-v, in, gn);
+            const float id = ip - in;
+            const float gd = gp + gn;
             const float f  = (vin - v) * invRs - id;
             const float df = -invRs - gd;
 
