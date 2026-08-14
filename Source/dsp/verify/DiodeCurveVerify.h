@@ -66,6 +66,37 @@ inline DiodeCurveReport runDiodeCurveVerifications()
             r.fail (oss.str());
     }
 
+    // --- Device: bulk Rs flattens high-forward I vs Shockley-only ---
+    {
+        auto dRs = devices::siliconSignal();
+        auto dIdeal = dRs;
+        dIdeal.rs = 0.0f;
+        const float v = 0.75f;
+        const float iRs = dRs.current (v);
+        const float iId = dIdeal.current (v);
+        std::ostringstream oss;
+        oss << "Rs flatten I(0.75) rs=" << iRs << " shockley=" << iId;
+        if (iRs > 0.0f && iId > 0.0f && iRs < iId * 0.9f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
+    // --- Device: well above vMax, G → 1/Rs (not a G=0 plateau) ---
+    {
+        const auto d = devices::siliconSignal();
+        const float v = 3.0f;
+        const float g = d.conductance (v);
+        const float gRs = 1.0f / std::max (d.rs, 1.0e-6f);
+        const float rel = std::abs (g - gRs) / gRs;
+        std::ostringstream oss;
+        oss << "G(3V)=" << g << " 1/Rs=" << gRs << " relErr=" << rel;
+        if (rel < 1.0e-3f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str());
+    }
+
     // --- Device: Ge conducts earlier than Si; LED later (same I probe) ---
     {
         constexpr float iProbe = 1.0e-4f; // 0.1 mA

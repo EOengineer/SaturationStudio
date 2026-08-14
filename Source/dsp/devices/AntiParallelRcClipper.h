@@ -15,7 +15,7 @@
  *   ieq = -geq * V_prev - I_c_prev
  *
  * Still one nonlinear node → 1-D Newton; State carries C memory.
- * DiodeDevice is unchanged (no junction C / thermal on the part).
+ * DiodeDevice (Shockley + bulk Rs) is unchanged here — no junction C / thermal.
  */
 namespace devices
 {
@@ -94,8 +94,11 @@ private:
             if (std::abs (v) > lim * 1.25f)
                 v = std::clamp (vin, -lim, lim);
 
-            const float id = dPos.current (v) - dNeg.current (-v);
-            const float gd = dPos.conductance (v) + dNeg.conductance (-v);
+            float ip = 0.0f, gp = 0.0f, in = 0.0f, gn = 0.0f;
+            dPos.stamp (v, ip, gp);
+            dNeg.stamp (-v, in, gn);
+            const float id = ip - in;
+            const float gd = gp + gn;
             // f = (Vin-V)/Rs - Id - geq*V - ieq
             const float f  = (vin - v) * invRs - id - geq * v - ieq;
             const float df = -invRs - gd - geq;

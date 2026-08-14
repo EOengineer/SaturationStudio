@@ -1,11 +1,11 @@
 # Diode model
 
-**Shockley diode device** + **ideal-op-amp feedback clipper** (`Rin`, `Rf`, antiparallel FB diodes, `Cf`), running inside SaturationStudio’s 4× oversampling island. Flavors select real device params (`Is`, `n Vt`).
+**Shockley diode device** (junction + bulk series \(R_s\)) + **ideal-op-amp feedback clipper** (`Rin`, `Rf`, antiparallel FB diodes, `Cf`), running inside SaturationStudio’s 4× oversampling island. Flavors select real device params (`Is`, `n Vt`, bulk \(R_s\)).
 
 ## Layers
 
 ```text
-DiodeDevice              → Shockley I(V), G(V)                 (reusable part)
+DiodeDevice              → Shockley I(Vj) + bulk Rs stamp      (reusable part)
 AntiParallelClipper      → Vin—Rs—V, diodes to gnd             (static net)
 AntiParallelRcClipper    → same + shunt C                      (dynamic shunt net)
 FeedbackDiodeClipper     → ideal OA + Rin/Rf + FB diodes + Cf  (Diode family saturator)
@@ -28,7 +28,7 @@ Ideal OA with `(+)` grounded → virtual ground at `(−)`. KCL at the inverting
 \frac{V_\mathrm{in}}{R_\mathrm{in}} + \frac{V_\mathrm{out}}{R_f} + I_d(V_\mathrm{out}) + I_{C_f} = 0
 \]
 
-with Shockley \(I_d(V)=I_\mathrm{pos}(V)-I_\mathrm{neg}(-V)\). `Cf` uses a trapezoidal companion. Audio out is \(-V_\mathrm{out}\) so small-signal polarity matches the older shunt clippers.
+with Shockley \(I_d(V)=I_\mathrm{pos}(V)-I_\mathrm{neg}(-V)\) including each diode’s bulk \(R_s\) (terminal \(V=V_j+IR_s\); high-forward \(G\to 1/R_s\)). That bulk \(R_s\) is **not** the shunt-clipper source resistor and **not** Drive→`Rin`. `Cf` uses a trapezoidal companion. Audio out is \(-V_\mathrm{out}\) so small-signal polarity matches the older shunt clippers.
 
 Default: \(R_f=10\,\mathrm{k}\Omega\), \(C_f=100\,\mathrm{pF}\); \(R_\mathrm{in}\) set by Drive.
 
@@ -54,7 +54,7 @@ Default: \(R_f=10\,\mathrm{k}\Omega\), \(C_f=100\,\mathrm{pF}\); \(R_\mathrm{in}
 
 | File | Role |
 |------|------|
-| `Source/dsp/devices/DiodeDevice.h` | Shockley part |
+| `Source/dsp/devices/DiodeDevice.h` | Shockley + bulk Rs stamp |
 | `Source/dsp/devices/FeedbackDiodeClipper.h` | Ideal-OA feedback clipper |
 | `Source/dsp/models/DiodeCurve.h` | Flavor, Drive→Rin, makeup |
 | `Source/dsp/models/DiodeModel.h` | `SaturationModel` + Cf state |
