@@ -30,7 +30,7 @@ TubeDevice  → TriodeStage          → TubeModel (live)
 |------|------|--------|
 | [`DiodeDevice`](../../Source/dsp/devices/DiodeDevice.h) | Shockley junction + bulk \(R_s\) | Live — used by diode clippers |
 | [`TubeDevice`](../../Source/dsp/devices/TubeDevice.h) | Koren triode \(I_p(V_{gk}, V_{ak})\) + conductances | Library part |
-| [`TriodeStage`](../../Source/dsp/devices/TriodeStage.h) | Common-cathode Newton island (stamps `TubeDevice`) | Live via `TubeModel` |
+| [`TriodeStage`](../../Source/dsp/devices/TriodeStage.h) | Common-cathode Newton island (stamps `TubeDevice`); Cc coupling + light Rg/Miller | Live via `TubeModel` |
 | [`NewtonSolver`](../../Source/dsp/devices/NewtonSolver.h) | Tiny dense Newton helper | Shared by nets |
 | Transformer / iron | Hysteresis / magnetics | Later |
 | Power tubes, etc. | Beam / pentode laws | Later |

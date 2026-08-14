@@ -16,7 +16,7 @@ Same split as `DiodeDevice` vs `FeedbackDiodeClipper`:
 
 ```text
 TubeDevice     → accurate Ip(Vgk, Vak)  — do not inflate µ/KP for “more grit”
-TriodeStage    → Drive→grid volts, Ra/Rk/Ck/Vb, plate scale  — saturation depth lives here
+TriodeStage    → Drive→grid, Miller, load, coupling, plate scale  — saturation depth lives here
 TubeModel      → makeup / −18 loudness contract
 ```
 
@@ -25,12 +25,22 @@ Extra clipping and Drive feel come from **how hard we drive the grid and how the
 ## Signal path (inside OS island) — live
 
 ```text
-x → Drive→grid AC gain → Newton common-cathode (Vp, Vk) → AC plate scale → makeup → y
+x → Drive→grid AC gain → Rg/Miller LPF → clamp → Newton (Vp, Vk) → AC plate scale → Cc coupling HPF → makeup → y
 ```
 
 `Drive ≈ 0` hard-bypasses to identity (no stage processing).
 
-Teaching stage defaults: \(R_a=120\,\mathrm{k}\Omega\), \(R_k=1.5\,\mathrm{k}\Omega\), \(C_k=22\,\mu\mathrm{F}\), \(V_b=250\,\mathrm{V}\) (Ra raised slightly for stage gain into plate clip). Grid clamp ≈ \([-8,+1]\,\mathrm{V}\). No NFB.
+Teaching stage defaults:
+
+| Part | Value | Role |
+|------|-------|------|
+| \(R_a\) | \(120\,\mathrm{k}\Omega\) | Plate load (raised slightly for stage gain into clip) |
+| \(R_k\) / \(C_k\) | \(1.5\,\mathrm{k}\Omega\) / \(22\,\mu\mathrm{F}\) | Cathode bias + bypass |
+| \(V_b\) | \(250\,\mathrm{V}\) | B+ |
+| \(C_c\) / \(R_l\) | \(22\,\mathrm{nF}\) / \(1\,\mathrm{M}\Omega\) | Output coupling HPF (~7 Hz) |
+| \(R_g\) / \(C_m\) | \(68\,\mathrm{k}\Omega\) / \(100\,\mathrm{pF}\) | Grid stopper + effective Miller (1st-order LPF; not a full Cgp stamp) |
+
+Grid clamp ≈ \([-8,+1]\,\mathrm{V}\). No NFB. Newton stays **2×2** (Vp, Vk).
 
 ## Flavors
 
@@ -58,7 +68,7 @@ Stage knobs: `kMaxGridGain` / `kDriveCurve` / `kPlateToAudio` in `TriodeStage`; 
 | File | Role |
 |------|------|
 | `devices/TubeDevice.h` | Koren triode library part |
-| `devices/TriodeStage.h` | Common-cathode Newton consumer (live) |
+| `devices/TriodeStage.h` | Common-cathode Newton consumer (live) — coupling + Miller |
 | `devices/NewtonSolver.h` | Dense Newton helper |
 | `TubeModel.h` | `SaturationModel` wrapper — owns per-channel stages |
 | `TubeCurve.h` | Parked waveshape (unused by live path) |
@@ -79,9 +89,10 @@ clang++ -std=c++17 -O2 -I Source tools/tube_stage_verify_main.cpp -o tools/tube_
 ./tools/tube_stage_verify
 ```
 
-`tube_curve_verify` locks −18 RMS in 0…+11 dB @ Drive 0.5/1, harmonic density Drive 1 ≫ 0.5, and AX7 > AU7 RMS. `tube_aliasing_verify` mirrors the diode AA proxy (1× vs 4× at 5 kHz).
+`tube_curve_verify` locks −18 RMS in 0…+11 dB @ Drive 0.5/1, harmonic density Drive 1 ≫ 0.5, and AX7 > AU7 RMS. `tube_stage_verify` also locks coupling DC block and mild Miller HF ≤ mid. `tube_aliasing_verify` mirrors the diode AA proxy (1× vs 4× at 5 kHz).
 
 ## Later
 
-- Coupling HPF / Miller if needed
+- True grid conduction vs hard clamp
+- Full Cgp stamp (expand Newton) if the light Miller LPF is not enough
 - Richer stage — still not a Champ amp
