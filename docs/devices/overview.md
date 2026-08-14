@@ -43,7 +43,7 @@ TubeDevice  → TriodeStage          → TubeModel (live)
 | **Circuit consumers** | `FeedbackDiodeClipper`, `TriodeStage` |
 | **Product saturators** | `DiodeModel`, Newton `TubeModel`, Tape / Transformer / Preamp curves |
 
-Live **Tube** UI flavors (12AX7 / 5751 / 12AU7) select `TubeDevice` factories. Parked waveshape `TubeCurve` is unused by the live path.
+Live **Tube** UI flavors (12AX7 / 5751 / 12AU7) select `TubeDevice` factories.
 
 ## Explicit non-goal
 

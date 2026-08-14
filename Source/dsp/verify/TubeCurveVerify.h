@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../models/TubeCurve.h"
 #include "../models/TubeModel.h"
 #include "../models/DiodeModel.h"
 #include "../LevelReference.h"
@@ -245,23 +244,6 @@ inline TubeCurveReport runTubeCurveVerifications()
             r.pass (oss.str());
         else
             r.fail (oss.str() + " (expected H2..5 at Drive 1 ≫ Drive 0.5)");
-    }
-
-    // Parked waveshape still C¹ (TubeCurve kept in-tree)
-    {
-        bool okDeriv = true;
-        for (int flavor : { TubeFlavorIds::ax7, TubeFlavorIds::type5751, TubeFlavorIds::au7 })
-        {
-            const auto c = tube::coeffsForFlavor (flavor);
-            const float eps = 1.0e-4f;
-            const float deriv = (tube::shape (eps, c) - tube::shape (-eps, c)) / (2.0f * eps);
-            if (std::abs (deriv - 1.0f) >= 1.0e-3f)
-                okDeriv = false;
-        }
-        if (okDeriv)
-            r.pass ("parked TubeCurve f'(0)≈1 (all flavors)");
-        else
-            r.fail ("parked TubeCurve f'(0) not ≈ 1");
     }
 
     return r;

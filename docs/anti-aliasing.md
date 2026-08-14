@@ -6,7 +6,7 @@ Any instantaneous nonlinearity (clip, tube curve, diode I–V) creates new harmo
 
 ## What we ship
 
-**4× oversampling** around the saturation model (`Oversampler.h`), **linear-phase FIR** half-band stages (`filterHalfBandFIREquiripple`). Diode uses a Newton clipper (no ADAA). Live Tube is a **Newton `TriodeStage`** (OS-only, no ADAA on the plate path); parked `TubeCurve` still has first-order ADAA but is unused by `TubeModel`. Tape/Transformer/Preamp keep first-order ADAA on their waveshapers.
+**4× oversampling** around the saturation model (`Oversampler.h`), **linear-phase FIR** half-band stages (`filterHalfBandFIREquiripple`). Diode and Tube use Newton clippers (no ADAA) — anti-aliasing relies on OS. Tape/Transformer/Preamp keep first-order ADAA on their waveshapers.
 
 Path: upsample mid → model (Drive → nonlinearity → makeup) → downsample mid.
 
@@ -19,7 +19,7 @@ Raising the OS factor is on the table if abuse cases still alias after 4× — e
 | Technique | Role |
 |-----------|------|
 | Oversampling (4× now) | Push images above a higher Nyquist, then filter |
-| ADAA (Tape / Transformer / Preamp; parked TubeCurve) | Cut aliases of memoryless shapers cheaply |
+| ADAA (Tape / Transformer / Preamp) | Cut aliases of memoryless shapers cheaply |
 | Diode / Tube Newton clippers | Rely on OS; raise factor if needed |
 | Analog HF limiting in a circuit model | Later dynamic networks — not a substitute for OS |
 
