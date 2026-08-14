@@ -41,7 +41,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SaturationStudioAudioProcess
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParamIDs::satModel, 1 }, "Model",
-        juce::StringArray { "Diode", "Tube", "Tape", "Transformer", "Preamp" }, 0));
+        juce::StringArray { "Diode", "Tube" }, 0));
 
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ParamIDs::diodeFlavor, 1 }, "Diode Flavor",
@@ -116,6 +116,7 @@ void SaturationStudioAudioProcessor::syncEngineFromParams()
     engine.setCutoffs (lowHz, highHz);
     // Apply family first so a newly created model receives Drive below
     engine.setModelFamily (model != nullptr ? juce::roundToInt (model->load()) : 0);
+
     engine.setDrive (drive != nullptr ? drive->load() : 0.5f);
     engine.setMix (mix != nullptr ? mix->load() : 1.0f);
     engine.setOutputDb (bandOut != nullptr ? bandOut->load() : 0.0f);

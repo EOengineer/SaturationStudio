@@ -73,21 +73,11 @@ void SaturationStudioAudioProcessorEditor::refreshFlavorHost()
             tubeFlavorAttachment = std::make_unique<ComboAttachment> (
                 processor.getAPVTS(), ParamIDs::tubeFlavor, box);
             break;
-        case 2:
-            paramHost.showTapeLive();
-            break;
-        case 3:
-            paramHost.showTransformerLive();
-            break;
-        case 4:
-            paramHost.showPreampFlavors();
-            preampFlavorAttachment = std::make_unique<ComboAttachment> (
-                processor.getAPVTS(), ParamIDs::preampFlavor, box);
-            break;
         default:
-            paramHost.showTubeFlavors();
-            tubeFlavorAttachment = std::make_unique<ComboAttachment> (
-                processor.getAPVTS(), ParamIDs::tubeFlavor, box);
+            // Tape / Transformer / Preamp temporarily hidden from UI.
+            paramHost.showDiodeFlavors();
+            diodeFlavorAttachment = std::make_unique<ComboAttachment> (
+                processor.getAPVTS(), ParamIDs::diodeFlavor, box);
             break;
     }
 
