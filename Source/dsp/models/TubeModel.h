@@ -1,14 +1,17 @@
 #pragma once
 
-#include "TubeCurve.h"
+#include "../devices/TriodeStage.h"
+#include "../devices/TubeDevice.h"
 #include "SaturationModel.h"
 #include "../../util/ParamIDs.h"
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 /**
- * Tube family saturator: triode-ish asymmetric tanh + first-order ADAA.
- * Flavors (12AX7 / 5751 / 12AU7) are waveshape stand-ins for mu — not Koren Newton.
- * Same Drive / −18 makeup contract as Diode; even-heavy vs Silicon diode.
+ * Tube family saturator: live common-cathode Newton TriodeStage stamping TubeDevice.
+ * Flavors select Koren factories (12AX7 / 5751 / 12AU7). Drive → grid AC gain inside the stage.
+ * Waveshape TubeCurve is parked (not used here). Same Drive=0 identity + −18 makeup contract.
  */
 class TubeModel final : public SaturationModel
 {
@@ -16,30 +19,43 @@ public:
     const char* getId() const override { return ModelIds::tube; }
     const char* getDisplayName() const override { return "Tube"; }
 
-    void prepare (double /*sampleRate*/, int /*maxBlock*/, int numChannels) override
+    void prepare (double sampleRate, int /*maxBlock*/, int numChannels) override
     {
+        osSampleRate = sampleRate > 0.0 ? sampleRate : 192000.0;
         const int ch = numChannels > 0 ? numChannels : 1;
-        prevDriven.assign ((size_t) ch, 0.0f);
-        coeffs = tube::coeffsForFlavor (tubeFlavor);
-        updateGains();
+        stages.resize ((size_t) ch);
+        for (auto& s : stages)
+        {
+            s.prepare ((float) osSampleRate, deviceForFlavor (tubeFlavor));
+            s.setDrive (drive);
+        }
+        updateMakeup();
     }
 
     void reset() override
     {
-        std::fill (prevDriven.begin(), prevDriven.end(), 0.0f);
+        for (auto& s : stages)
+            s.reset();
     }
 
     void setDrive (float drive01) override
     {
         drive = drive01;
-        updateGains();
+        for (auto& s : stages)
+            s.setDrive (drive);
+        updateMakeup();
     }
 
     void setTubeFlavor (int flavor) override
     {
         tubeFlavor = flavor;
-        coeffs = tube::coeffsForFlavor (flavor);
-        updateGains();
+        const auto dev = deviceForFlavor (flavor);
+        for (auto& s : stages)
+        {
+            s.setTube (dev);
+            s.setDrive (drive);
+        }
+        updateMakeup();
     }
 
     int getTubeFlavor() const noexcept { return tubeFlavor; }
@@ -50,19 +66,19 @@ public:
         if (channels == nullptr || numChannels <= 0 || numSamples <= 0)
             return;
 
-        if ((int) prevDriven.size() < numChannels)
-            prevDriven.resize ((size_t) numChannels, 0.0f);
+        if ((int) stages.size() < numChannels)
+        {
+            const size_t old = stages.size();
+            stages.resize ((size_t) numChannels);
+            for (size_t i = old; i < stages.size(); ++i)
+            {
+                stages[i].prepare ((float) osSampleRate, deviceForFlavor (tubeFlavor));
+                stages[i].setDrive (drive);
+            }
+        }
 
         if (drive < 1.0e-6f)
-        {
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                if (channels[ch] == nullptr)
-                    continue;
-                prevDriven[(size_t) ch] = channels[ch][numSamples - 1];
-            }
-            return;
-        }
+            return; // identity bypass
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
@@ -70,30 +86,44 @@ public:
             if (data == nullptr)
                 continue;
 
-            float prev = prevDriven[(size_t) ch];
+            auto& stage = stages[(size_t) ch];
             for (int i = 0; i < numSamples; ++i)
-            {
-                const float x = data[i];
-                const float xd = x * driveGain;
-                const float y = tube::adaa (xd, prev, coeffs);
-                prev = xd;
-                data[i] = y * makeupGain;
-            }
-            prevDriven[(size_t) ch] = prev;
+                data[i] = stage.processSample (data[i]) * makeupGain;
         }
     }
 
 private:
-    void updateGains() noexcept
+    static devices::TubeDevice deviceForFlavor (int flavor) noexcept
     {
-        driveGain = tube::driveGainLinear (drive, coeffs);
-        makeupGain = tube::makeupGainLinear (drive, coeffs);
+        switch (flavor)
+        {
+            case TubeFlavorIds::type5751: return devices::type5751();
+            case TubeFlavorIds::au7:      return devices::twelveAu7();
+            case TubeFlavorIds::ax7:
+            default:                      return devices::twelveAx7();
+        }
+    }
+
+    void updateMakeup() noexcept
+    {
+        // Mild loudness stabilize vs Drive; stage already maps Drive→grid gain.
+        // Blend toward 1/sqrt(gridGain proxy) so Drive 1 is not wildly louder than 0.5.
+        const float d = std::clamp (drive, 0.0f, 1.0f);
+        if (d < 1.0e-6f)
+        {
+            makeupGain = 1.0f;
+            return;
+        }
+        const float gridProxy = std::max (1.0e-3f, std::pow (d, 1.35f) * 28.0f);
+        const float comp = 1.0f / std::sqrt (gridProxy / 8.0f); // ~unity-ish around Drive~0.45
+        const float blend = 0.35f * std::pow (d, 0.85f);
+        makeupGain = 1.0f + blend * (comp - 1.0f);
+        makeupGain = std::clamp (makeupGain, 0.25f, 4.0f);
     }
 
     int tubeFlavor = TubeFlavorIds::ax7;
     float drive = 0.5f;
-    float driveGain = 1.0f;
     float makeupGain = 1.0f;
-    tube::Coeffs coeffs {};
-    std::vector<float> prevDriven;
+    double osSampleRate = 192000.0;
+    std::vector<devices::TriodeStage> stages;
 };
