@@ -11,7 +11,7 @@
 /**
  * Tube family saturator: live common-cathode 3×3 Newton TriodeStage stamping TubeDevice.
  * Flavors select Koren factories (12AX7 / 5751 / 12AU7). Drive → Vdrive inside the stage.
- * Waveshape TubeCurve is parked (not used here). Same Drive=0 identity + −18 makeup contract.
+ * Drive=0 identity + −18 makeup contract.
  */
 class TubeModel final : public SaturationModel
 {

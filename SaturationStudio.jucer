@@ -40,7 +40,6 @@
           <FILE id="dmH" name="DiodeModel.h" compile="0" resource="0" file="Source/dsp/models/DiodeModel.h"/>
           <FILE id="dcH" name="DiodeCurve.h" compile="0" resource="0" file="Source/dsp/models/DiodeCurve.h"/>
           <FILE id="tmH" name="TubeModel.h" compile="0" resource="0" file="Source/dsp/models/TubeModel.h"/>
-          <FILE id="tcH" name="TubeCurve.h" compile="0" resource="0" file="Source/dsp/models/TubeCurve.h"/>
           <FILE id="tpH" name="TapeModel.h" compile="0" resource="0" file="Source/dsp/models/TapeModel.h"/>
           <FILE id="tpcH" name="TapeCurve.h" compile="0" resource="0" file="Source/dsp/models/TapeCurve.h"/>
           <FILE id="trH" name="TransformerModel.h" compile="0" resource="0" file="Source/dsp/models/TransformerModel.h"/>

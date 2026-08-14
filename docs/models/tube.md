@@ -6,7 +6,7 @@ Live **common-cathode Newton** tube saturator: `TubeDevice` (Koren \(I_p\)) stam
 TubeDevice factory (flavor) → TriodeStage (per channel) → makeup → y
 ```
 
-Waveshape `TubeCurve` (ADAA tanh) is **parked** in-tree and unused by `TubeModel`. See [`docs/devices/overview.md`](../devices/overview.md).
+See [`docs/devices/overview.md`](../devices/overview.md).
 
 **Not in scope:** a full Champ amp in SaturationStudio.
 
@@ -74,7 +74,6 @@ Track these so we do not pretend the stage is a full datasheet model:
 - **Audio Newton budget** is capped (≤8 iters, short line search) for realtime; DC settle uses a tighter solve.
 - **Cgp / Cgk** are teaching capacitances (order-of-magnitude AX7-ish); not full socket/wiring C or variable Miller tables.
 - **Makeup / plate scale** stabilize plugin loudness vs Diode — not circuit physics.
-- **Parked `TubeCurve.h`** still in tree until a delete PR.
 - **AA:** Newton Tube is OS-only (no ADAA on the plate path).
 - **Out of scope:** NFB, second stage, Champ, power-tube laws.
 
@@ -87,7 +86,6 @@ Track these so we do not pretend the stage is a full datasheet model:
 | `devices/DiodeDevice.h` | Teaching grid conduction diode stamp |
 | `devices/NewtonSolver.h` | Dense Newton helper |
 | `TubeModel.h` | `SaturationModel` wrapper — owns per-channel stages |
-| `TubeCurve.h` | Parked waveshape (unused by live path) |
 
 ## Verifies
 
@@ -110,5 +108,4 @@ clang++ -std=c++17 -O2 -I Source tools/tube_stage_verify_main.cpp -o tools/tube_
 ## Later
 
 - Refine teaching Ig / Cgp/Cgk from literature or measurements if host A/B asks
-- Delete parked `TubeCurve.h`
 - Richer stage — still not a Champ amp
