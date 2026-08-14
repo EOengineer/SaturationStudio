@@ -16,10 +16,11 @@ v1 scaffold: linear-phase HP/LP band split, 4× oversampling island, topology mo
 - Diode flavors (Si / Ge / LED / Asym) and Preamp flavors (Neve 1073 / API 512) wired in UI
 - Spectrum meter 20 Hz–20 kHz with in-band highlight + saturation heat placeholder
 - Offline DSP verifies (`tools/`)
+- Growing **physically modeled component library** (`Source/dsp/devices/`: diodes, `TubeDevice` triodes, …) composed into clippers — not a full Champ amp
 
 **Level contract:** aim plugin input RMS near −18 dBFS when authoring/evaluating models. See [`docs/architecture.md`](docs/architecture.md).
 
-All five family curves are live — see [`docs/models/`](docs/models/).
+All five family curves are live — see [`docs/models/`](docs/models/). Parts shelf: [`docs/devices/overview.md`](docs/devices/overview.md).
 
 ## Setup
 
@@ -91,6 +92,9 @@ clang++ -std=c++17 -O2 -I Source tools/diode_aliasing_verify_main.cpp -o tools/d
 clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
 ./tools/tube_curve_verify
 
+clang++ -std=c++17 -O2 -I Source tools/tube_device_verify_main.cpp -o tools/tube_device_verify
+./tools/tube_device_verify
+
 clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/family_curves_verify
 ./tools/family_curves_verify
 ```
@@ -108,13 +112,14 @@ See [`docs/testing.md`](docs/testing.md).
 
 | Doc | Topic |
 |-----|--------|
-| [`docs/architecture.md`](docs/architecture.md) | Signal path, params, models |
+| [`docs/architecture.md`](docs/architecture.md) | Signal path, params, models, component library |
+| [`docs/devices/overview.md`](docs/devices/overview.md) | Physically modeled parts shelf (no full Champ) |
 | [`docs/linear-phase-band.md`](docs/linear-phase-band.md) | FIR band split |
 | [`docs/anti-aliasing.md`](docs/anti-aliasing.md) | Oversampling / ADAA |
 | [`docs/testing.md`](docs/testing.md) | Verify suite |
 | [`docs/models/overview.md`](docs/models/overview.md) | Topology roadmap → tube amps |
 | [`docs/models/diode.md`](docs/models/diode.md) | Feedback OA clipper; Drive = Rin |
-| [`docs/models/tube.md`](docs/models/tube.md) | Tube 12AX7 / 5751 / 12AU7 waveshape |
+| [`docs/models/tube.md`](docs/models/tube.md) | Tube waveshape + TubeDevice part |
 | [`docs/models/tape.md`](docs/models/tape.md) | Tape soft symmetric |
 | [`docs/models/transformer.md`](docs/models/transformer.md) | Transformer iron (no hysteresis yet) |
 | [`docs/models/preamp.md`](docs/models/preamp.md) | Preamp 1073 / API flavors |

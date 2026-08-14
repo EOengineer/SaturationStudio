@@ -2,7 +2,9 @@
 
 Product-grade **triode-ish asymmetric tanh** tube-family saturator with first-order **ADAA**, inside the 4× OS island (same shell as Diode).
 
-Flavors are **waveshape stand-ins for mu** (12AX7 / 5751 / 12AU7) — not Koren `Ip` / Newton stages. Champ-style device physics stays a later milestone.
+Flavors are **waveshape stand-ins for mu** (12AX7 / 5751 / 12AU7). The physically modeled library part is [`TubeDevice`](../../Source/dsp/devices/TubeDevice.h) (Koren \(I_p\)) — see [`docs/devices/overview.md`](../devices/overview.md). A Newton stage that *stamps* that part is the next clipping-realism step; this waveshape saturator stays live until then.
+
+**Not in scope:** a full Champ amp in SaturationStudio.
 
 ## Signal path (inside OS island)
 
@@ -12,11 +14,11 @@ x → Drive gain (flavor) → ADAA tube transfer → Makeup → y
 
 ## Flavors
 
-| Flavor | Intent |
-|--------|--------|
-| **12AX7** (default) | Highest gain density — hotter Drive map, stronger asymmetry |
-| **5751** | Mid (~70% of AX7 feel) |
-| **12AU7** | Lowest gain — cleaner longer, softest clip |
+| Flavor | Intent (waveshape today) | Library part (later wiring) |
+|--------|--------------------------|-----------------------------|
+| **12AX7** (default) | Highest gain density | `devices::twelveAx7()` |
+| **5751** | Mid (~70% of AX7 feel) | `devices::type5751()` |
+| **12AU7** | Lowest gain — cleaner longer | `devices::twelveAu7()` |
 
 ## Transfer
 
@@ -47,7 +49,8 @@ Same as Diode (per flavor):
 
 | File | Role |
 |------|------|
-| `TubeCurve.h` | Shape, ADAA, flavor coeffs / Drive maps |
+| `devices/TubeDevice.h` | Koren triode library part (no Drive / OS) |
+| `TubeCurve.h` | Interim shape, ADAA, flavor coeffs / Drive maps |
 | `TubeModel.h` | `SaturationModel` wrapper + `setTubeFlavor` |
 
 ## Verifies
@@ -55,8 +58,12 @@ Same as Diode (per flavor):
 ```bash
 clang++ -std=c++17 -O2 -I Source tools/tube_curve_verify_main.cpp -o tools/tube_curve_verify
 ./tools/tube_curve_verify
+
+clang++ -std=c++17 -O2 -I Source tools/tube_device_verify_main.cpp -o tools/tube_device_verify
+./tools/tube_device_verify
 ```
 
 ## Later
 
-- Full MNA / Newton triode stages (Champ-style Koren `Ip`) — separate milestone
+- Common-cathode Newton island that stamps `TubeDevice` (first circuit consumer)
+- Rewire UI flavors to device factories instead of tanh coeffs
