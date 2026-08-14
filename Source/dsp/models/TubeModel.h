@@ -9,8 +9,8 @@
 #include <vector>
 
 /**
- * Tube family saturator: live common-cathode Newton TriodeStage stamping TubeDevice.
- * Flavors select Koren factories (12AX7 / 5751 / 12AU7). Drive → grid AC gain inside the stage.
+ * Tube family saturator: live common-cathode 3×3 Newton TriodeStage stamping TubeDevice.
+ * Flavors select Koren factories (12AX7 / 5751 / 12AU7). Drive → Vdrive inside the stage.
  * Waveshape TubeCurve is parked (not used here). Same Drive=0 identity + −18 makeup contract.
  */
 class TubeModel final : public SaturationModel
@@ -115,8 +115,8 @@ private:
             makeupGain = 1.0f;
             return;
         }
-        // Match TriodeStage grid map (kMaxGridGain=72, kDriveCurve=2.55).
-        const float gridProxy = std::max (1.0e-3f, std::pow (d, 2.55f) * 72.0f);
+        // Match TriodeStage grid map (kMaxGridGain=86.4, kDriveCurve=2.55).
+        const float gridProxy = std::max (1.0e-3f, std::pow (d, 2.55f) * 86.4f);
         const float comp = 1.0f / std::sqrt (std::max (gridProxy / 7.0f, 1.0e-3f));
         const float blend = 0.50f * std::pow (d, 0.75f);
         makeupGain = (1.0f + blend * (comp - 1.0f)) * kOutputNudge;

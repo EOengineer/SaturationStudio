@@ -277,6 +277,37 @@ inline TriodeStageReport runTriodeStageVerifications()
             r.fail (oss.str() + " (expected HF ≤ mid)");
     }
 
+    // Grid conduction: hard positive Vdrive does not brick-wall Vg at +1 V
+    {
+        devices::TriodeStage stage;
+        stage.prepare ((float) sr, devices::twelveAx7());
+        stage.setDrive (1.0f);
+        stage.reset();
+
+        float maxVg = -1.0e9f;
+        float minVg = 1.0e9f;
+        for (int i = 0; i < n; ++i)
+        {
+            const float vin = 0.9f * std::sin (2.0f * kPi * 200.0f * (float) i / (float) sr);
+            (void) stage.processSample (vin);
+            maxVg = std::max (maxVg, stage.getGrid());
+            minVg = std::min (minVg, stage.getGrid());
+            if (! std::isfinite (stage.getGrid()))
+            {
+                maxVg = -1.0f;
+                break;
+            }
+        }
+        std::ostringstream oss;
+        oss << "grid conduction Vg range [" << minVg << "," << maxVg << "]";
+        // Soft diode: positive peaks may exceed old +1 V clamp; still finite and bounded.
+        if (std::isfinite (maxVg) && std::isfinite (minVg) && maxVg > 0.2f && maxVg < 20.0f
+            && minVg > -80.0f)
+            r.pass (oss.str());
+        else
+            r.fail (oss.str() + " (expected soft grid dig-in, not NaN/brick)");
+    }
+
     return r;
 }
 } // namespace verify

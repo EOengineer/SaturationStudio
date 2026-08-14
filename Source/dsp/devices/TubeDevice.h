@@ -37,11 +37,14 @@ struct TubeDevice
         return std::isfinite (ip) ? ip : 0.0f;
     }
 
-    /** dIp/dVgk and dIp/dVak (A/V). */
-    void plateConductances (float vgk, float vak, float& gGrid, float& gPlate) const noexcept
+    /** dIp/dVgk and dIp/dVak (A/V). Optionally returns Ip at the probe. */
+    void plateConductances (float vgk, float vak, float& gGrid, float& gPlate,
+                            float* ipOut = nullptr) const noexcept
     {
         constexpr float h = 1.0e-3f;
         const float i0 = plateCurrent (vgk, vak);
+        if (ipOut != nullptr)
+            *ipOut = i0;
         gGrid = (plateCurrent (vgk + h, vak) - i0) / h;
         gPlate = (plateCurrent (vgk, vak + h) - i0) / h;
         gGrid = std::max (gGrid, 0.0f);
