@@ -40,7 +40,7 @@ clang++ -std=c++17 -O2 -I Source tools/family_curves_verify_main.cpp -o tools/fa
 | `engine_passthrough_verify` | Registry, Diode Drive=0 null through split, factory default |
 | `diode_curve_verify` | Device physics (incl. bulk Rs), DC/FB/RC nets, Drive→Rin, Drive=0, harmonics, high-Drive finite |
 | `diode_aliasing_verify` | Silicon aliasing proxy: 1× vs 4× harm/total at 5 kHz (−18, Drive 0.5 gate; Drive 1.0 report). Ongoing AA tool — not JUCE OS identical; Plugin Doctor for host sweeps |
-| `tube_curve_verify` | Drive=0 identity, AX7 even>odd vs Si diode, AX7>5751>AU7 Drive1 gain + Drive0.5 H2, flavors finite, Drive ramp, f'(0)≈1 |
+| `tube_curve_verify` | Live Newton TubeModel: Drive=0 identity, AX7 harmonics vs Si, AX7>AU7 RMS, flavors finite, Drive ramp harmonics, parked TubeCurve f'(0) |
 | `tube_device_verify` | Koren TubeDevice: FD conductances, Ip≥0 / cutoff, µ AX7>5751>AU7 + sane Ip at typical biases, abuse finite |
 | `tube_stage_verify` | TriodeStage Newton: idle settle, hot sine finite, AX7>AU7 gain, Drive0≪Drive0.5, abuse finite, harmonics |
 | `family_curves_verify` | Tape/Transformer/Preamp Drive=0 identity, finite at Drive=1, Tape odd-lean, Transformer even vs Si, Preamp Neve even-lean vs API |

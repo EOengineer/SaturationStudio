@@ -15,7 +15,7 @@
  * KCL cathode: Ip - Vk/Rk - Ic = 0  (Ck trapezoidal companion)
  *
  * Teaching defaults (Ra/Rk/Ck/Vb) are starting points — not a Champ amp.
- * No NFB. Live TubeModel still uses waveshape; this stage is offline-first.
+ * No NFB. Live TubeModel stamps this stage per channel inside the 4× OS island.
  *
  * See docs/devices/overview.md, docs/models/tube.md.
  */

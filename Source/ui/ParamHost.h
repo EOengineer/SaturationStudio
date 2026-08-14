@@ -48,7 +48,7 @@ public:
         flavorBox.setEnabled (true);
         flavorBox.setVisible (true);
         flavorLabel.setVisible (true);
-        hintLabel.setText ("Tube saturator — 12AX7 / 5751 / 12AU7 waveshape (mu feel); ADAA + 4× OS",
+        hintLabel.setText ("Tube saturator — 12AX7 / 5751 / 12AU7 Koren Newton stage; 4× OS",
                            juce::dontSendNotification);
     }
 

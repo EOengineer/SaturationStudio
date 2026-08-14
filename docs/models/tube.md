@@ -1,73 +1,53 @@
 # Tube model
 
-Product-grade **triode-ish asymmetric tanh** tube-family saturator with first-order **ADAA**, inside the 4× OS island (same shell as Diode).
-
-Flavors are **waveshape stand-ins for mu** (12AX7 / 5751 / 12AU7). The physically modeled stack is:
+Live **common-cathode Newton** tube saturator: `TubeDevice` (Koren \(I_p\)) stamped by `TriodeStage`, inside the 4× OS island.
 
 ```text
-TubeDevice (Koren Ip) → TriodeStage (common-cathode Newton) → TubeModel (live flip: gated)
+TubeDevice factory (flavor) → TriodeStage (per channel) → makeup → y
 ```
 
-`TriodeStage` exists and passes `tube_stage_verify` offline. **Live Tube UI still uses the waveshape** until a follow-up wires `TubeModel` to the stage. See [`docs/devices/overview.md`](../devices/overview.md).
+Waveshape `TubeCurve` (ADAA tanh) is **parked** in-tree and unused by `TubeModel`. See [`docs/devices/overview.md`](../devices/overview.md).
 
 **Not in scope:** a full Champ amp in SaturationStudio.
 
-## Signal path (inside OS island) — live today
+## Signal path (inside OS island) — live
 
 ```text
-x → Drive gain (flavor) → ADAA tube transfer → Makeup → y
+x → Drive→grid AC gain → Newton common-cathode (Vp, Vk) → AC plate scale → makeup → y
 ```
 
-## Offline TriodeStage (not live yet)
+`Drive ≈ 0` hard-bypasses to identity (no stage processing).
 
-```text
-x → Drive→grid AC gain → Newton common-cathode (TubeDevice stamp) → AC plate → scale
-```
-
-Teaching defaults: \(R_a=100\,\mathrm{k}\Omega\), \(R_k=1.5\,\mathrm{k}\Omega\), \(C_k=22\,\mu\mathrm{F}\), \(V_b=250\,\mathrm{V}\). Drive maps plugin input to grid volts (clamped). No NFB.
+Teaching stage defaults: \(R_a=100\,\mathrm{k}\Omega\), \(R_k=1.5\,\mathrm{k}\Omega\), \(C_k=22\,\mu\mathrm{F}\), \(V_b=250\,\mathrm{V}\). No NFB.
 
 ## Flavors
 
-| Flavor | Intent (waveshape today) | Library part / stage |
-|--------|--------------------------|----------------------|
-| **12AX7** (default) | Highest gain density | `devices::twelveAx7()` |
-| **5751** | Mid (~70% of AX7 feel) | `devices::type5751()` |
-| **12AU7** | Lowest gain — cleaner longer | `devices::twelveAu7()` |
-
-## Transfer (live waveshape)
-
-\[
-f(x) = a\,\tanh(s\,x/a)
-\quad\text{with } a = a_{+} \text{ (}x\ge 0\text{) or } a_{-} \text{ (}x<0\text{)}
-\]
-
-- \(f'(0)=1\) from both sides (C¹)
-- \(a_{+} \ne a_{-}\) → **even** harmonics (vs odd-heavy Silicon diode)
-- Per-flavor `maxDriveDb` / `driveCurve` / asymmetry
-- Antiderivative \(F(x)=(a/s)^{2}\log\cosh(s\,x/a)\) feeds ADAA
-
-`Drive ≈ 0` hard-bypasses to identity on the waveshape path.
+| Flavor | Library part |
+|--------|----------------|
+| **12AX7** (default) | `devices::twelveAx7()` |
+| **5751** | `devices::type5751()` |
+| **12AU7** | `devices::twelveAu7()` |
 
 ## Level / Drive contract
-
-Same as Diode (per flavor):
 
 | Setting | Intent |
 |---------|--------|
 | Plugin input ≈ **−18 dBFS** RMS | Modeling reference |
-| Drive **0** | Transparent (waveshape) / near-silent grid (stage) |
-| Drive **~0.5** | Mostly clean warmth at −18 |
-| Drive **1** | Clearly saturated; AU7 less crushed than AX7 at the same knob |
+| Drive **0** | Transparent (identity bypass) |
+| Drive **~0.5** | Warmth / mild saturation at −18 |
+| Drive **1** | Clearly saturated; AU7 less dense than AX7 at the same knob |
+
+Drive maps to **grid AC volts** inside `TriodeStage` (not a separate pre-gain on top of the stage). Mild makeup on `TubeModel` stabilizes loudness.
 
 ## Sources
 
 | File | Role |
 |------|------|
-| `devices/TubeDevice.h` | Koren triode library part (no Drive / OS) |
-| `devices/TriodeStage.h` | Common-cathode Newton consumer (offline) |
+| `devices/TubeDevice.h` | Koren triode library part |
+| `devices/TriodeStage.h` | Common-cathode Newton consumer (live) |
 | `devices/NewtonSolver.h` | Dense Newton helper |
-| `TubeCurve.h` | Interim shape, ADAA, flavor coeffs / Drive maps |
-| `TubeModel.h` | `SaturationModel` wrapper + `setTubeFlavor` (waveshape until flip) |
+| `TubeModel.h` | `SaturationModel` wrapper — owns per-channel stages |
+| `TubeCurve.h` | Parked waveshape (unused by live path) |
 
 ## Verifies
 
@@ -84,6 +64,6 @@ clang++ -std=c++17 -O2 -I Source tools/tube_stage_verify_main.cpp -o tools/tube_
 
 ## Later
 
-- Wire `TubeModel::process` → `TriodeStage` (per channel); flavors → device factories
-- Host-listen vs waveshape; then park tanh path
-- Richer stage (Miller, coupling) — still not a Champ amp
+- Makeup / plate-scale polish against −18 host listening
+- Coupling HPF / Miller if needed
+- Richer stage — still not a Champ amp
